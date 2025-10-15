@@ -1,0 +1,8 @@
+Modelo de resistividad
+Espesores (m): ['1.16', '4.17', '14.2']
+Resistividades ρ (Ohm.m): ['6.59', '14.71', '5.81', '32.59']
+Profundidad (m): 19.53
+
+Estadísticas del ajuste
+χ^2: 0.49
+Rel RMS: 3.47 %

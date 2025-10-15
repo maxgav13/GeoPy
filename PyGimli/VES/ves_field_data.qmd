@@ -25,11 +25,11 @@ from pygimli.viewer.mpl import drawModel1D
 Cargamos los datos del sondeo eléctrico vertical (VES) desde un archivo de texto, usando la librería `pandas`. El archivo contiene columnas para la separación AB/2, MN y la resistividad aparente. Ajustamos los nombres de las columnas para facilitar su uso posterior. Los datos se pueden cargar también con `numpy` y luego convertirlos a un DataFrame de `pandas`.
 
 ```{python}
-data = pd.read_table("GeoPy/PyGimli/VES/curso_geofisica/datos/SEV1.TXT")
+data = pd.read_table("PyGimli/VES/curso_geofisica/datos/SEV1.TXT")
 print(data.head())
 vescode = "SEV-1" # Código del sondeo, nombre a usar en archivos de salida
 
-# ab2, mn, roa = np.genfromtxt("GeoPy/PyGimli/VES/curso_geofisica/datos/SEV1.TXT", 
+# ab2, mn, roa = np.genfromtxt("PyGimli/VES/curso_geofisica/datos/SEV1.TXT", 
 #                              skip_header=1,
 #                              unpack=True)
 
@@ -56,10 +56,10 @@ data.drop_duplicates(subset=["ab2","roa"], inplace=True)
 data.reset_index(drop=True, inplace=True)
 ```
 
-Si existen valores atípicos en los datos, se pueden eliminar. En este caso, el valor con índice 21 es un valor atípico evidente, ver gráfico de datos más abajo. Además, reiniciamos los índices del DataFrame.
+Si existen valores atípicos en los datos, se pueden eliminar. En este caso, el valor con índice 19 es un valor atípico evidente, ver gráfico de datos más abajo. Además, reiniciamos los índices del DataFrame.
 
 ```{python}
-data.drop(21, axis=0, inplace=True)
+data.drop(19, axis=0, inplace=True)
 data.reset_index(drop=True, inplace=True)
 ```
 
@@ -85,7 +85,7 @@ ax.set_ylabel(r"Resistividad aparente $\rho_a$ ($\Omega$m)")
 ax.set_xlabel("AB/2 (m)")
 ax.grid(True, which='both')
 
-# plt.savefig("GeoPy/PyGimli/VES/" + vescode + ".png", dpi=300, bbox_inches='tight')
+# plt.savefig("PyGimli/VES/" + vescode + ".png", dpi=300, bbox_inches='tight')
 ```
 
 ## Ajuste manual
@@ -106,12 +106,13 @@ vesM = VESManager(ab2=ab2,
 
 ```{python}
 ncapasm = len(resistividades) # Número de capas en el modelo
+Lam = 20 # Parámetro de suavizado
 
 vesM.invert(rhoa, err, 
             nLayers=ncapasm, 
             lam=Lam, lambdaFactor=0.8,
             startModel=modelM,
-            maxIter=0,
+            maxIter=0, # para que no haga iteraciones/inversión
             )
 ```
 
@@ -198,7 +199,7 @@ plt.title('Cambio de $\chi^2$ y Rel RMS\n con Marquardt', fontsize=16, fontweigh
 fig.tight_layout()
 plt.show()
 
-# plt.savefig("GeoPy/PyGimli/VES/" + vescode + "-chi2-marquardt-.png", dpi=300, bbox_inches='tight')
+# plt.savefig("PyGimli/VES/" + vescode + "-chi2-marquardt-.png", dpi=300, bbox_inches='tight')
 ```
 
 Es el cambio en $\chi^2$ significativo al aumentar el número de capas? Usamos la prueba estadística Chi-cuadrado para responder a esta pregunta.
@@ -254,7 +255,7 @@ plt.title('Cambio de $\chi^2$ y Rel RMS\n con VESManager', fontsize=16, fontweig
 fig.tight_layout()
 plt.show()
 
-# plt.savefig("GeoPy/PyGimli/VES/" + vescode + "-chi2-vesmanager-.png", dpi=300, bbox_inches='tight')
+# plt.savefig("PyGimli/VES/" + vescode + "-chi2-vesmanager-.png", dpi=300, bbox_inches='tight')
 ```
 
 Es el cambio en $\chi^2$ significativo al aumentar el número de capas? Usamos la prueba estadística Chi-cuadrado para responder a esta pregunta.
@@ -347,6 +348,8 @@ ax.grid(True, which='both')
 ax.set_ylabel(r"Resistividad aparente $\rho_a$ ($\Omega$m)")
 ax.set_xlabel("AB/2 (m)")
 ax.set_title("Datos y ajuste\n" + f" ({ncapas} capas)")
+
+# plt.savefig("PyGimli/VES/" + vescode + "-fit-modelos-" + str(ncapas) + "capas.png", dpi=300, bbox_inches='tight')
 ```
 
 ```{python}
@@ -365,7 +368,7 @@ ax.grid(True, which='both')
 plt.tight_layout()
 plt.show()
 
-# plt.savefig("GeoPy/PyGimli/VES/" + vescode + "-fit-modelos-" + str(ncapas) + "capas.png", dpi=300, bbox_inches='tight')
+# plt.savefig("PyGimli/VES/" + vescode + "-modelos-" + str(ncapas) + "capas.png", dpi=300, bbox_inches='tight')
 ```
 
 ## Ajuste final y análisis del modelo
@@ -373,8 +376,8 @@ plt.show()
 Escogemos el modelo deseado para análisis posterior.
 
 ```{python}
-Inv = inv # inv o ves.inv
-Model = model # model o model2
+Inv = ves.inv # inv o ves.inv
+Model = model2 # model o model2
 Response = Inv.response
 Chi2 = Inv.chi2()
 RelRMS = Inv.relrms()
@@ -405,7 +408,7 @@ veslist = ["Modelo de resistividad\n",
            f"\u03C7^2: {Chi2:.2f}\n",
            f"Rel RMS: {RelRMS:.2f} %\n"]
 
-with open("GeoPy/PyGimli/VES/" + vescode + "-modelo-" + str(ncapas) + "capas.txt", "w") as f:
+with open("PyGimli/VES/" + vescode + "-modelo-" + str(ncapas) + "capas.txt", "w") as f:
     f.writelines(veslist)
 ```
 
@@ -447,7 +450,7 @@ ax[1].yaxis.set_ticks_position('right')
 plt.tight_layout()
 plt.show()
 
-# plt.savefig("GeoPy/PyGimli/VES/" + vescode + "-fit-" + str(ncapas) + "capas.png", dpi=300, bbox_inches='tight')
+# plt.savefig("PyGimli/VES/" + vescode + "-fit-" + str(ncapas) + "capas.png", dpi=300, bbox_inches='tight')
 ```
 
 ### Incertidumbre del modelo
@@ -470,7 +473,7 @@ plt.title("Matriz de correlación\n del modelo" + f" ({ncapas} capas)")
 plt.tight_layout()
 plt.show()
 
-# plt.savefig("GeoPy/PyGimli/VES/" + vescode + "-correl-" + str(ncapas) + "capas.png", dpi=300, bbox_inches='tight')
+# plt.savefig("PyGimli/VES/" + vescode + "-correl-" + str(ncapas) + "capas.png", dpi=300, bbox_inches='tight')
 ```
 
 ```{python}
@@ -483,7 +486,7 @@ fig, ax = plt.subplots(figsize=(5,6))
 res_error = res * (var[ncapas-1:])
 thk_error = thk * var[:ncapas-1]
 
-drawModel1D(model=model, ax=ax, color='orange', label="model")
+drawModel1D(model=Model, ax=ax, color='orange', label="model")
 ax.errorbar(res, mid, marker="*", color='red', ls="None", xerr=res_error)
 _ = ax.errorbar(resmean, z, marker="*", color='green', ls="None", yerr=thk_error)
 ax.grid(True, which='both')
@@ -494,5 +497,5 @@ ax.set_title("Modelo de resistividad\n" + f" de {ncapas} capas" + ", con barras 
 plt.tight_layout()
 plt.show()
 
-# plt.savefig("GeoPy/PyGimli/VES/" + vescode + "-fit-errorbars-" + str(ncapas) + "capas.png", dpi=300, bbox_inches='tight')
+# plt.savefig("PyGimli/VES/" + vescode + "-fit-errorbars-" + str(ncapas) + "capas.png", dpi=300, bbox_inches='tight')
 ```

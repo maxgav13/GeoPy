@@ -5,7 +5,7 @@ import glob
 # import seisio
 # from obspy import read
 
-source_f = r"GeoPy/Refrapy/sample data/perfil_2/data/" # Source folder
+source_f = r"Refrapy/sample data/perfil_2/data/" # Source folder
 dest_f = source_f + "SEG/" # Destination folder
 
 os.makedirs(dest_f, exist_ok=True) # Create destination folder if it doesn't exist
