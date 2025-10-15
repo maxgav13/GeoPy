@@ -1,0 +1,376 @@
+---
+format: 
+  html: default
+  typst: default
+jupyter: python3
+---
+
+# Inversión de refracción sísmica
+
+Este ejemplo sencillo muestra cómo usar el Refraction Manager para invertir datos de refracción sísmica. Se usan datos del ejemplo de Koenigsee, que pueden encontrarse en [repositorio de ejemplos de pyGIMLi](https://github.com/gimli-org/example-data/blob/master/traveltime/koenigsee.sgt).
+
+```{python}
+import numpy as np
+import scipy
+from scipy.interpolate import make_interp_spline
+import matplotlib.pyplot as plt
+from matplotlib.ticker import MaxNLocator
+import pygimli as pg
+import pygimli.physics.traveltime as tt
+from pygimli.frameworks import PriorModelling
+```
+
+<!-- La función `pg.getExampleData` descarga los datos. Observando los datos hay 714 datos, 63 sensores (disparos y geófonos), con columnas s (disparo), g (geófono), y t (tiempo). -->
+
+Se pueden cargar datos mediante `tt.load("filename.sgt")`, siempre cumpliendo con la estructura de columnas: s (disparo), g (geófono), y t (tiempo en s).
+
+## Cargar datos
+
+```{python}
+# data = pg.getExampleData("traveltime/koenigsee.sgt", verbose=True)
+data = tt.load("GeoPy/PyGimli/SRT/prueba_vs.sgt")
+data.sortSensorsX()
+print(data)
+tomocode = "SRT-1" # Código del perfil, nombre a usar en archivos de salida
+```
+
+Exploramos la topografía en los datos, si la tiene.
+
+```{python}
+ypos = pg.y(data)
+xpos = pg.x(data)
+```
+
+```{python}
+lp = max(xpos - min(xpos))  # longitud del perfil
+deltaZ = max(ypos - min(ypos))
+
+print(f"Longitud del perfil: {lp:.2f} m")
+print(f"Elevación mínima: {min(ypos):.2f} m")
+print(f"Elevación máxima: {max(ypos):.2f} m")
+print(f"Diferencia de elevación: {deltaZ:.2f} m")
+```
+
+Si no se tiene incluida la topografía en el archivo o no la reconoce se puede agregar por medio de un archivo (x,y), si se tiene encabezado de columnas se usa `skiprows=1` si no se usa `skiprows=0`. El archivo de topografía tiene que comprender los extremos (en x) del perfil para evitar extrapolación.
+
+```{python}
+topo = np.loadtxt('GeoPy/PyGimli/ERT/DD_topo.txt', skiprows=1)
+```
+
+Por lo general la topografía empieza en x=0, tomando como inicio el disparo en distancias negativas. La topografía se puede desplazar/ajustar con `x0`, donde `x0` es la posición (offset) del primer disparo. Si la topografía ya contempla el offset, entonces `x0=0`.
+
+Se interpolan los datos topográficos a las posiciones de los sensores (disparos y geófonos), el argumento `k` de `make_interp_spline` define si la interpolación es lineal (1) o con b-splines (3).
+
+```{python}
+x0 = 0 # offset de la topografía
+topo_x = topo[:,0] + x0 
+topo_y = topo[:,1] 
+
+bspl = make_interp_spline(topo_x, topo_y, k=3)
+y_interp = bspl(xpos)
+print(y_interp)
+```
+
+Se asignan las nuevas posiciones/elevaciones a los sensores.
+
+```{python}
+sensor_positions = data.sensorPositions()
+for i in range(len(sensor_positions)):
+  pos = sensor_positions[i]
+  pos[1] = y_interp[i]
+  data.setSensorPosition(i,pos)
+```
+
+```{python}
+sensor_positions = data.sensorPositions()
+for i in range(len(sensor_positions)):
+  pos = sensor_positions[i]
+  # pos[1] = ypos[-i-1]
+  pos[1] = pg.y(data)[-i-1]
+  data.setSensorPosition(i,pos)
+```
+
+```{python}
+plt.figure()
+ax = plt.gca()
+ax.set_title('Elevación del perfil de tomografía')
+ax.set_ylabel('Z (m)')
+ax.set_xlabel('Distancia (m)')
+ax.set_aspect(aspect=5) # exageracion vertical
+# ax.invert_xaxis() # invierte la direccion del eje-x
+plt.plot(pg.x(data), pg.y(data), 'x-', color='b')
+plt.show()
+```
+
+Encontrar y separar las ubicaciones de los disparos (s) y geófonos (g).
+
+```{python}
+sx = pg.x(data)[np.unique(data['s'])]
+sy = pg.y(data)[np.unique(data['s'])]
+
+gx = pg.x(data)[list(set(range(len(pg.x(data)))) - set(np.unique(data['s'])))]
+gy = pg.y(data)[list(set(range(len(pg.x(data)))) - set(np.unique(data['s'])))]
+```
+
+## Curvas de los picks
+
+```{python}
+fig, ax = plt.subplots()
+ax.invert_yaxis()
+lines = tt.drawFirstPicks(ax, data)
+ax.set_xlabel(r"Distancia (m)", fontsize=14)
+ax.set_ylabel("Tiempo (s)", fontsize=14)
+ax.tick_params(labelsize=12)
+
+# plt.savefig('GeoPy/PyGimli/SRT/tomo-picks-' + tomocode + '-.png', dpi=300, bbox_inches='tight')
+```
+
+## Inversión de los datos
+
+Para realizar la inversión se tiene que crear el administrador de la inversión con `tt.TravelTimeManager`.
+
+```{python}
+mgr_refra = tt.TravelTimeManager(data)
+
+# ax, cbar = mgr_refra.showData()
+```
+
+Se realiza la inversión mediante el método `invert`. La malla es creada on-the-fly de acuerdo con la posición de los sensores. Se puede jugar con el gradiente del modelo inicial (argumentos `vTop` y `vBottom`) y la regularización con `lam` y `zWeight`. Adicionalmente se pueden definir los límites de velocidad con `limits` (mínimo y máximo), el tamaño máximo de celda con `paraMaxCellSize`, y la profundidad de la malla con `paraDepth`. El argumento `quality` define la calidad de la malla (típicamente entre 33 y 35), entre más alto el valor, mejor la calidad pero mayor tiempo de cálculo.
+
+```{python}
+mgr_refra.invert(secNodes = 3, 
+                 paraMaxCellSize = 5.0, # tamaño máximo de celda en m
+                #  paraDepth = 35.0, # profundidad de la malla en m
+                 lam = 200, 
+                 zWeight = 0.8, 
+                 vTop = 500, 
+                 vBottom = 5000, 
+                #  limits = [10, 6000], # límites de velocidad en m/s,
+                 quality = 34, 
+                 verbose = 1
+                 )
+```
+
+### Cambio en el $\chi^2$
+
+```{python}
+chihx = np.arange(1,len(mgr_refra.inv.chi2History)+1)
+chihy = mgr_refra.inv.chi2History
+
+print(f"\u03C7^2: {chihy[-1]:.2f}")
+```
+
+```{python}
+fig, ax = plt.subplots()
+ax.set_ylabel('$\chi^2$', fontsize=16, fontweight='bold')
+ax.set_xlabel('Iteración', fontsize=16, fontweight='bold')
+ax.tick_params(labelsize=14)
+ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+ax.semilogy(chihx, chihy, 'o-', color='b')
+plt.show()
+
+# plt.savefig('GeoPy/PyGimli/SRT/srt-chi2-iter-' + tomocode + '-.png', dpi=300, bbox_inches='tight')
+```
+
+### Valores mínimos y máximos
+
+```{python}
+vmin = min(mgr_refra.model)
+vmax = max(mgr_refra.model)
+
+print(f"Vmin: {vmin:.1f} m/s")
+print(f"Vmax: {vmax:.1f} m/s")
+```
+
+```{python}
+vlist = ["Velocidades del modelo\n", 
+         "Mínima: " + str(round(vmin,2)) + " m/s\n", 
+         "Máxima: " + str(round(vmax,2)) + " m/s\n"
+         "\n",
+         "Estadísticas del ajuste\n",
+         f"\u03C7^2: {mgr_refra.inv.chi2():.2f}\n",
+         f"Rel RMS: {mgr_refra.inv.relrms():.2f} %\n",
+         f"Abs RMS: {mgr_refra.inv.absrms()*1000:.3f} ms"
+         ]
+
+with open("GeoPy/PyGimli/SRT/velocidades-" + tomocode + ".txt", "w") as f:
+    f.writelines(vlist)
+```
+
+## Visualización de los resultados
+
+### Ajuste de las curvas
+
+Vemos el ajuste entre los picks (cruces) y el modelo (curvas).
+
+```{python}
+ax = plt.gca()
+lines2 = mgr_refra.showFit(ax, firstPicks=True)
+ax.set_xlabel(r"Distancia (m)", fontsize=14)
+ax.set_ylabel("Tiempo (s)", fontsize=14)
+ax.tick_params(labelsize=12)
+
+# plt.savefig('GeoPy/PyGimli/SRT/tomo-fit-' + tomocode + '-.png', dpi=300, bbox_inches='tight')
+```
+
+### Errores entre observados y modelados
+
+```{python}
+pickTT = np.array(mgr_refra.data('t'))
+modTT = np.array(mgr_refra.inv.response)
+resTT = pickTT - modTT
+r, p = scipy.stats.pearsonr(pickTT, modTT)
+
+print(f"r: {r:.3f}")
+print(f"p: {p:.3f}")
+```
+
+```{python}
+plt.figure(figsize=(12, 8))
+
+ax = plt.subplot(1,2,1)
+ax.scatter(pickTT*1000,modTT*1000,alpha=.2,s=20)
+ax.axline((0,0),slope=1,color='k',ls='--',lw=.5)
+ax.set_xlabel('Tiempos observados (ms)', fontsize=14)
+ax.set_ylabel('Tiempos modelados (ms)', fontsize=14)
+ax.tick_params(labelsize=12)
+
+plt.subplot(1,2,2)
+plt.hist(resTT*1000,edgecolor='k')
+plt.xlabel('Residuos (Obs - Mod) (ms)', fontsize=14)
+plt.tick_params(labelsize=12)
+
+plt.show()
+
+# plt.savefig('GeoPy/PyGimli/SRT/refra-model-fit-' + tomocode + '-.png', dpi=300, bbox_inches='tight')
+```
+
+### Modelo (tomografía)
+
+Se puede desplegar solo el modelo (tomografía) personalizando con keywords. El argumento `coverage` permite ver la cobertura de rayos en el modelo, donde 1 muestra todo el modelo, `mgr_refra.standardizedCoverage()` muestra el área (celdas) cubierta(s) por los rayos.
+
+```{python}
+kw_refra = dict(cMin = 200, 
+                cMax = 2500, 
+                cMap = "plasma_r",
+                nLevs = 10,
+                coverage = mgr_refra.standardizedCoverage(), 
+                # coverage = 1, 
+                logScale = False
+                )
+```
+
+```{python}
+# ax, cbar = pg.show(mgr_refra.paraDomain, mgr_refra.model, **kw_refra, figsize=(8,4))
+ax, cbar = mgr_refra.showResult(**kw_refra)
+rays = mgr_refra.drawRayPaths(ax=ax, color="w", lw=0.3, alpha=1)
+ax.scatter(sx,sy+.2,marker='v',color='r',s=30,alpha=.75,label='Disparo')
+ax.scatter(gx,gy+.05,marker='o',color='k',s=15,alpha=.5,label='Geófono')
+ax.set_title('Rel RMS={:.2f} %, $\chi^2$={:.2f}'.format(mgr_refra.inv.relrms(), mgr_refra.inv.chi2()))
+ax.set_ylabel('Z (m)')
+ax.set_xlabel('Distancia (m)')
+# ax.set_ylim(bottom=-40) # ajusta el limite inferior del eje-y
+ax.set_aspect(aspect=1) # ajusta la relacion de aspecto
+cbar.set_label('Velocidad (m/s)')
+ax.legend(loc='lower right', fontsize='small') # agrega leyenda
+
+print(f"\u03C7^2: {mgr_refra.inv.chi2():.2f}")
+print(f"Rel RMS: {mgr_refra.inv.relrms():.2f} %")
+print(f"Abs RMS: {mgr_refra.inv.absrms()*1000:.3f} ms")
+
+# plt.savefig('GeoPy/PyGimli/SRT/tomo-refra-' + tomocode + '-.png', dpi=300, bbox_inches='tight')
+```
+
+### Modelo como contornos
+
+Es necesario convertir los datos de celdas a puntos. Con el argumento `nLevs` se definen la cantidad de clases más 1 que se quieren obtener.
+
+```{python}
+refra_points = pg.core.cellDataToPointData(mgr_refra.paraDomain, mgr_refra.model)
+```
+
+```{python}
+ax, cbar = pg.show(mgr_refra.paraDomain, refra_points, 
+                   nLevs=6,
+                   cMin=vmin, cMax=vmax, 
+                   cMap="RdYlBu_r",
+                   logScale=False,
+                   linewidths=.5
+                   )
+rays = mgr_refra.drawRayPaths(ax=ax, color="k", lw=0.3, alpha=0.5)
+ax.scatter(sx,sy+.2,marker='v',color='r',s=30,alpha=.75,label='Disparo')
+ax.scatter(gx,gy+.05,marker='o',color='k',s=15,alpha=.5,label='Geófono')
+ax.set_title('Rel RMS={:.2f} %, $\chi^2$={:.2f}'.format(mgr_refra.inv.relrms(), mgr_refra.inv.chi2()))
+ax.set_ylabel('Z (m)')
+ax.set_xlabel('Distancia (m)')
+ax.set_aspect(aspect=1)
+cbar.set_label('Velocidad (m/s)')
+ax.legend(loc='lower right', fontsize='small') # agrega leyenda
+
+# plt.savefig('GeoPy/PyGimli/SRT/tomo-refra-contour-' + tomocode + '-.png', dpi=300, bbox_inches='tight')
+```
+
+```{python}
+kw_refra2 = dict(levels = np.arange(500,3500,500),
+                 # levels = [vmin,1200,1800,3000,vmax],
+                 # levels = np.linspace(500,3000,6),
+                 # nLevs = 6,
+                 cMin=vmin, cMax=vmax, 
+                 logScale=False,
+                 fillContour=False, 
+                 colors='grey', 
+                 linewidths=1, 
+                 alpha=1
+                 )
+```
+
+```{python}
+ax, cbar = mgr_refra.showResult(nLevs=6, **kw_refra)
+ax.scatter(sx,sy+.2,marker='v',color='r',s=30,alpha=.75,label='Disparo')
+ax.scatter(gx,gy+.05,marker='o',color='k',s=15,alpha=.5,label='Geófono')
+pg.viewer.mpl.drawField(ax, mgr_refra.paraDomain, refra_points
+                        , **kw_refra2
+                        )
+# cl = pg.viewer.mpl.drawField(ax, mgr_refra.paraDomain, refra_points
+#                              , **kw_refra2
+#                              )
+# ax.clabel(cl, cl.levels[:-1], fmt='%1.0f', fontsize=8)
+ax.set_title('Rel RMS={:.2f} %, $\chi^2$={:.2f}'.format(mgr_refra.inv.relrms(), mgr_refra.inv.chi2()))
+ax.set_ylabel('Z (m)')
+ax.set_xlabel('Distancia (m)')
+ax.set_aspect(aspect=1)
+cbar.set_label('Velocidad (m/s)')
+ax.legend(loc='lower right', fontsize='small') # agrega leyenda
+```
+
+## Perfil 1D en el centro de la tomografia
+
+```{python}
+x = np.repeat(max(pg.x(data))/2, 50)
+y = np.linspace(0,-20, 50)
+```
+
+```{python}
+posVec = [pg.Pos(pos) for pos in zip(x, y)]
+para = pg.Mesh(mgr_refra.paraDomain)  # make a copy
+para.setCellMarkers(pg.IVector(para.cellCount()))
+fopDP = PriorModelling(para, posVec)
+```
+
+```{python}
+fig, ax = plt.subplots(figsize=(3,5))
+velSmooth = fopDP(mgr_refra.model)
+ax.plot(velSmooth, y, color='orange', label="SRT")
+# ax.semilogx(velSmooth, y, color='orange', label="SRT")
+ax.set_xlabel(r"V (m/s)")
+ax.set_ylabel("Z (m)")
+ax.grid(True)
+
+# plt.savefig('GeoPy/PyGimli/SRT/tomo-refra-' + tomocode + '-1D-' + f"{x[0]:.0f} m" + ".png", dpi=300, bbox_inches='tight')
+```
+
+## Salvar resultados
+
+```{python}
+mgr_refra.saveResult('GeoPy/PyGimli/SRT/tomo-refra-' + tomocode + '/')
+```

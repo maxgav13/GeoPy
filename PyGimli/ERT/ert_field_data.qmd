@@ -1,0 +1,472 @@
+---
+format: 
+  html: default
+  typst: default
+jupyter: python3
+---
+
+# Inversión de ERT con topografía
+
+```{python}
+import numpy as np
+import scipy
+from scipy.interpolate import make_interp_spline
+import matplotlib.pyplot as plt
+from matplotlib.ticker import MaxNLocator
+import pygimli as pg
+import pygimli.meshtools as mt
+from pygimli.physics import ert
+from pygimli.frameworks import PriorModelling
+```
+
+## Cargamos los datos
+
+Cargamos los datos con `ert.load("filename.dat")` que soporta diferentes tipos de formatos.
+
+```{python}
+data = ert.load('GeoPy/PyGimli/ERT/Wenner_1_2.dat', verbose=True)
+print(data)
+tomocode = "Wenner-1" # Código del perfil, nombre a usar en archivos de salida
+```
+
+Exploramos la topografía en los datos, si la tiene.
+
+```{python}
+ypos = pg.y(data)
+xpos = pg.x(data)
+```
+
+```{python}
+lp = max(xpos - min(xpos))  # longitud del perfil
+deltaZ = max(ypos - min(ypos))
+
+print(f"Longitud del perfil: {lp:.2f} m")
+print(f"Elevación mínima: {min(ypos):.2f} m")
+print(f"Elevación máxima: {max(ypos):.2f} m")
+print(f"Diferencia de elevación: {deltaZ:.2f} m")
+```
+
+Si no se tiene incluida la topografía en el archivo o no la reconoce se puede agregar por medio de un archivo (x,y), si se tiene encabezado de columnas se usa `skiprows=1` si no se usa `skiprows=0`. El archivo de topografía tiene que comprender los extremos del perfil para evitar extrapolación.
+
+```{python}
+topo = np.loadtxt('GeoPy/PyGimli/ERT/DD_topo.txt', skiprows=1)
+```
+
+Se interpolan los datos topográficos a las posiciones de los electrodos (sensores), el argumento `k` de `make_interp_spline` define si la interpolación es lineal (1) o con b-splines (3).
+
+```{python}
+bspl = make_interp_spline(topo[:,0], topo[:,1], k=3)
+y_interp = bspl(xpos)
+print(y_interp)
+```
+
+```{python}
+sensor_positions = data.sensorPositions()
+for i in range(len(sensor_positions)):
+  pos = sensor_positions[i]
+  pos[1] = y_interp[i]
+  data.setSensorPosition(i,pos)
+```
+
+Visualizamos la topografía.
+
+```{python}
+plt.figure()
+ax = plt.gca()
+ax.set_title('Elevación del perfil de tomografía')
+ax.set_ylabel('Z (m)')
+ax.set_xlabel('Distancia (m)')
+ax.set_aspect(aspect=5) # exageracion vertical
+# ax.invert_xaxis() # invierte la direccion del eje-x
+plt.plot(pg.x(data), pg.y(data), 'x-', color='b')
+plt.show()
+```
+
+## Calculamos valores necesarios para la inversión
+
+Los datos no traen el factor geométrico ('k'), por lo que tenemos que crearlos.
+
+```{python}
+k0 = ert.createGeometricFactors(data)  # the analytical one
+data['k'] = ert.createGeometricFactors(data, numerical=True)
+```
+
+Calcula la resistividad aparente en caso de que no la lea del archivo.
+
+```{python}
+if np.std(data['rhoa']) == 0:
+  data['rhoa'] = data['r'] * data['k']
+```
+
+Los datos por lo general no traen un campo de errores ('err'), requiriendo que los agreguemos.
+
+```{python}
+data.estimateError(relativeError=0.03, absoluteUError=5e-5)
+# which internally calls
+# data['err'] = ert.estimateError(data, ...)  # can also set manually
+_ = data.show(data['err']*100, label='error estimate (%)')
+```
+
+## Filtrado de datos
+
+En caso de requerir filtrar (limpiar) los datos de acuerdo a valores de alguna propiedad se pueden marcar como inválidos, o usar el método `.remove` sobre los datos para removerlos definitivamente.
+
+```{python}
+data.markInvalid(data['rhoa'] > 100)
+data
+```
+
+```{python}
+data.remove(data['rhoa'] > 100)
+data
+```
+
+## Pseudosección
+
+```{python}
+ert.showData(data, vals=data['rhoa'])
+```
+
+## Inversión de los datos
+
+Para realizar la inversión se tiene que crear el administrador de la inversión con `ERTManager`.
+
+```{python}
+mgr_ert = ert.ERTManager(data)
+```
+
+La inversión se puede correr con parámetros por defecto o se pueden ajustar:
+- `lam`: suavizado, mientras más alto mayor suavizado (20 es el defecto)
+- `paraDX`: división de elementos entre sensores (0.5 es 1 nodo adicional, 0.33 son 2)
+- `paraMaxCellSize`: área máxima de los elementos de la malla
+- `paraDepth`: profundidad de la malla
+- `quality`: calidad (refinado) de la malla, valores entre 33 y 35 son recomendados
+
+```{python}
+mod = mgr_ert.invert(data, 
+                     verbose=True,
+                     lam=10, 
+                     paraDX=0.3, 
+                     paraMaxCellSize=10, 
+                     paraDepth=35, 
+                     quality=34.4
+                     )
+```
+
+### Cambio en el $\chi^2$
+
+```{python}
+chihx = np.arange(1,len(mgr_ert.inv.chi2History)+1)
+chihy = mgr_ert.inv.chi2History
+```
+
+```{python}
+plt.figure()
+plt.ylabel('$\chi^2$', fontsize=16, fontweight='bold')
+plt.xlabel('Iteración', fontsize=16, fontweight='bold')
+plt.tick_params(labelsize=14)
+# plt.yscale('log')
+# plt.plot(chihx, chihy, 'o-', color='b')
+ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+plt.semilogy(chihx, chihy, 'o-', color='b')
+plt.show()
+
+# plt.savefig('GeoPy/PyGimli/ERT/ert-' + tomocode + '-chi2-iter.png', dpi=300, bbox_inches='tight')
+```
+
+### Valores mínimos y máximos
+
+```{python}
+rmin = min(mgr_ert.model)
+rmax = max(mgr_ert.model)
+
+print(f"Rmin: {rmin:.1f} ohm.m")
+print(f"Rmax: {rmax:.1f} ohm.m")
+```
+
+```{python}
+rlist = ["Resistividades del modelo\n", 
+         "Mínima: " + str(round(rmin,2)) + " ohm.m\n", 
+         "Máxima: " + str(round(rmax,2)) + " ohm.m\n"
+         "\n",
+         "Estadísticas del ajuste\n",
+         f"\u03C7^2: {mgr_ert.inv.chi2():.2f}\n",
+         f"Rel RMS: {mgr_ert.inv.relrms():.2f} %\n"]
+
+with open("GeoPy/PyGimli/ERT/resistividades-" + tomocode + "-.txt", "w") as f:
+    f.writelines(rlist)
+```
+
+## Visualización de los resultados
+
+```{python}
+ax, cb = mgr_ert.showResult()
+```
+
+Podemos ver los resultados de diferentes formas:
+- Resultado y ajuste
+- Ajuste
+- Diferencia con el ajuste
+
+```{python}
+_ = mgr_ert.showResultAndFit()
+# np.testing.assert_approx_equal(ert.inv.chi2(), 1.10883, significant=3)
+
+# plt.savefig('GeoPy/PyGimli/ERT/tomo-res-fit.png', dpi=300, bbox_inches='tight')
+```
+
+```{python}
+mgr_ert.showFit()
+
+# plt.savefig('GeoPy/PyGimli/ERT/tomo-fit.png', dpi=300, bbox_inches='tight')
+```
+
+```{python}
+mgr_ert.showMisfit()
+
+# plt.savefig('GeoPy/PyGimli/ERT/tomo-misfit.png', dpi=300, bbox_inches='tight')
+```
+
+Opciones gráficas para mostrar los resultados.
+
+```{python}
+kw_ert = dict(cMin=3, 
+              cMax=500, 
+              cMap="Spectral_r", 
+              logScale=True, 
+              xlabel="x (m)", 
+              ylabel="z (m)"
+              # ,coverage=0.9
+              )
+```
+
+```{python}
+# ax, cb = pg.show(mgr_ert.paraDomain, mgr_ert.model, nLevs=8, **kw_ert, figsize=(8,4), coverage=mgr_ert.coverage())
+ax, cb = mgr_ert.showResult(**kw_ert, orientation='horizontal')
+# ax.set_title(f"Rel RMS: {mgr_ert.inv.relrms():.2f} %")
+ax.set_title('Rel RMS={:.2f} %, $\chi^2$={:.2f}'.format(mgr_ert.inv.relrms(), mgr_ert.inv.chi2()), fontsize=12, fontweight='bold')
+ax.set_ylabel('Z (m)', fontsize=11, fontweight='normal')
+ax.set_xlabel('Distancia (m)', fontsize=11, fontweight='normal')
+ax.set_aspect(aspect=1)
+ax.set_frame_on(False)
+ax.tick_params(labelsize=11)
+# ax.spines['top'].set_visible(False)
+# ax.spines['right'].set_visible(False)
+# ax.spines['bottom'].set_visible(False)
+# ax.spines['left'].set_visible(False)
+cb.set_label('Resistividad ($\Omega$m)', fontsize=11, fontweight='normal')
+
+print(f"\u03C7^2: {mgr_ert.inv.chi2():.2f}")
+print(f"Rel RMS: {mgr_ert.inv.relrms():.2f}%")
+
+# plt.savefig('GeoPy/PyGimli/ERT/tomo-res-' + tomocode + '-.png', dpi=300, bbox_inches='tight')
+```
+
+## Creación y regularización de la malla
+
+Se pueden cambiar parámetros en la malla:
+- `zWeight`: relación entre vertical/horizontal, valores menores a 1 enfatizan estructuras horizontales, mayores a 1 estructuras verticales
+- `cType`: tipo de regularizacion, 1 es el defecto, 2 es mas suavizado
+- `correlationLengths`: lista `[h, v]` indicando la distancia de correlacion horizontal y vertical
+- `limits`: lista `[min max]` indicando los limites de los valores de la variable a invertir
+
+```{python}
+plc = mt.createParaMeshPLC(data, 
+                           paraDX=.5, 
+                           paraDepth=50, 
+                           boundary=0.2, 
+                           paraMaxCellSize=15
+                           )
+mesh = mt.createMesh(plc, quality=34.4, smooth=True)
+ax, cb = pg.show(mesh, markers=True, showMesh=True)
+
+# plt.savefig('GeoPy/PyGimli/ERT/tomo-mesh-' + tomocode + '-.png', dpi=300, bbox_inches='tight')
+```
+
+Se aplica la nueva malla al administrador, se aplican las regularizaciones deseadas, y se invierte el modelo.
+
+```{python}
+mgr_ert.setMesh(mesh)
+mgr_ert.inv.setRegularization(cType=1, zWeight=0.5)
+mgr_ert.invert()
+```
+
+### Errores entre observados y modelados
+
+```{python}
+obsRES = np.array(mgr_ert.data('rhoa'))
+modRES = np.array(mgr_ert.inv.response)
+resRES = obsRES - modRES
+r, p = scipy.stats.pearsonr(obsRES, modRES)
+
+print(f"r: {r:.3f}")
+print(f"p: {p:.3f}")
+```
+
+```{python}
+plt.figure(figsize=(12, 8))
+
+ax = plt.subplot(1,2,1)
+ax.scatter(obsRES,modRES,alpha=.2,s=20)
+ax.axline((0,0),slope=1,color='k',ls='--',lw=.5)
+ax.set_xlabel('Resistividades observadas ($\Omega$m)', fontsize=14)
+ax.set_ylabel('Resistividades modeladas ($\Omega$m)', fontsize=14)
+ax.tick_params(labelsize=12)
+
+plt.subplot(1,2,2)
+plt.hist(resRES,edgecolor='k')
+plt.xlabel('Residuos (Obs - Mod) ($\Omega$m)', fontsize=14)
+plt.tick_params(labelsize=12)
+
+plt.show()
+
+# plt.savefig('GeoPy/PyGimli/ERT/res-model-fit-' + tomocode + '-.png', dpi=300, bbox_inches='tight')
+```
+
+```{python}
+rmin = min(mgr_ert.model)
+rmax = max(mgr_ert.model)
+
+print(f"Rmin: {rmin:.1f} ohm.m")
+print(f"Rmax: {rmax:.1f} ohm.m")
+```
+
+## Modelo (tomografía)
+
+```{python}
+# ax, cb = pg.show(mgr_ert.paraDomain, mgr_ert.model, nLevs=8, **kw_ert, figsize=(8,4), coverage=mgr_ert.coverage())
+ax, cb = mgr_ert.showResult(nLevs=8,**kw_ert)
+# ax.set_title(f"Rel RMS: {mgr_ert.inv.relrms():.2f} %")
+ax.set_title('Rel RMS={:.2f} %, $\chi^2$={:.2f}'.format(mgr_ert.inv.relrms(), mgr_ert.inv.chi2()))
+ax.set_ylabel('Z (m)')
+ax.set_xlabel('Distancia (m)')
+ax.set_aspect(aspect=1)
+ax.set_frame_on(False)
+cb.set_label('Resistividad ($\Omega$m)')
+
+print(f"\u03C7^2: {mgr_ert.inv.chi2():.2f}")
+print(f"Rel RMS: {mgr_ert.inv.relrms():.2f}%")
+
+# plt.savefig('GeoPy/PyGimli/ERT/tomo-res-' + tomocode + '-.png', dpi=300, bbox_inches='tight')
+```
+
+## Modelo como contornos
+
+Con el argumento `nLevs` se definen la cantidad de clases más 1 que se quieren obtener y con `nCols` se define la cantidad de clases.
+
+### Opción 1 (menos suavizada)
+
+```{python}
+# ax, cb = pg.show(mgr_ert.paraDomain, mgr_ert.model, nCols=11, nLevs=12, contourLines=False, **kw_ert, figsize=(8,4), coverage=mgr_ert.coverage())
+ax, cb = mgr_ert.showResult(nCols=5, nLevs=6, **kw_ert)
+# ax.set_title(f"Rel RMS: {mgr_ert.inv.relrms():.2f} %")
+ax.set_title('Rel RMS={:.2f} %, $\chi^2$={:.2f}'.format(mgr_ert.inv.relrms(), mgr_ert.inv.chi2()))
+ax.set_ylabel('Z (m)')
+ax.set_xlabel('Distancia (m)')
+ax.set_aspect(aspect=1)
+ax.set_frame_on(False)
+cb.set_label('Resistividad ($\Omega$m)')
+
+# plt.savefig('GeoPy/PyGimli/ERT/tomo-res-contour-' + tomocode + '-.png', dpi=300, bbox_inches='tight')
+```
+
+### Opción 2 (más suavizada)
+
+Es necesario convertir los datos de celdas a puntos. 
+
+```{python}
+res_points = pg.core.cellDataToPointData(mgr_ert.paraDomain, mgr_ert.model)
+```
+
+```{python}
+ax, cbar = pg.show(mgr_ert.paraDomain, res_points, 
+                   nLevs=8,
+                   cMin=rmin, cMax=rmax, 
+                   cMap="RdYlBu_r",
+                   logScale=True,
+                   linewidths=.5
+                   )
+pg.viewer.mpl.drawSensors(ax, data.sensorPositions(), 
+                          sm='o', diam=3, color='m', alpha=.5)
+ax.set_title('Rel RMS={:.2f} %, $\chi^2$={:.2f}'.format(mgr_ert.inv.relrms(), mgr_ert.inv.chi2()))
+ax.set_ylabel('Z (m)')
+ax.set_xlabel('Distancia (m)')
+ax.set_aspect(aspect=1)
+cbar.set_label('Resistividad ($\Omega$m)')
+
+# plt.savefig('GeoPy/PyGimli/ERT/tomo-res-contour-' + tomocode + '-.png', dpi=300, bbox_inches='tight')
+```
+
+```{python}
+ax, cbar = mgr_ert.showResult(**kw_ert)
+pg.viewer.mpl.drawField(ax, mgr_ert.paraDomain, res_points,
+                        nLevs=6,
+                        # levels = [rmin,...,rmax],
+                        cMin=rmin, cMax=rmax, 
+                        logScale=True, 
+                        fillContour=False, 
+                        colors='k',
+                        # colors=["c","r","b","g","y"], 
+                        linewidths=1, 
+                        alpha=0.8
+                        )
+```
+
+## Obtener conductividad
+
+```{python}
+result = mgr_ert.paraDomain
+result["res"] = mgr_ert.model
+result["cond"] = 1 / result["res"] * 1000
+```
+
+```{python}
+ax, cb = pg.show(result, result["cond"], cMap="RdYlBu", logScale=True, nLevs=10, figsize=(8,4))
+ax.set_ylabel('Z (m)')
+ax.set_xlabel('Distancia (m)')
+ax.set_aspect(aspect=1)
+ax.set_frame_on(False)
+cb.set_label('Conductividad (mS/m)')
+
+# plt.savefig('GeoPy/PyGimli/ERT/tomo-cond-' + tomocode + '-.png', dpi=300, bbox_inches='tight')
+```
+
+## Perfil 1D en el centro de la tomografia
+
+```{python}
+x = np.repeat(max(pg.x(data))/2, 50)
+y = np.linspace(0,-45, 50)
+```
+
+```{python}
+posVec = [pg.Pos(pos) for pos in zip(x, y)]
+para = pg.Mesh(mgr_ert.paraDomain)  # make a copy
+para.setCellMarkers(pg.IVector(para.cellCount()))
+fopDP = PriorModelling(para, posVec)
+```
+
+```{python}
+fig, ax = plt.subplots(figsize=(3,5))
+resSmooth = fopDP(mgr_ert.model)
+# ax.plot(resSmooth, y, color='orange', label="ERT")
+ax.semilogx(resSmooth, y, color='orange', label="ERT")
+ax.set_xlabel(r"$\rho$ ($\Omega$m)")
+ax.set_ylabel("Z (m)")
+ax.grid(True)
+
+# plt.savefig('GeoPy/PyGimli/ERT/tomo-res-' + tomocode + '-1D-' + f"{x[0]:.0f} m" + ".png", dpi=300, bbox_inches='tight')
+```
+
+## Salvar resultados
+
+Salva todo
+
+```{python}
+mgr_ert.saveResult('GeoPy/PyGimli/ERT/tomo-res-' + tomocode + '/')
+```
+
+Salva los datos en un formato unificado
+
+```{python}
+data.save('GeoPy/PyGimli/ERT/Wenner_py.dat')
+```
