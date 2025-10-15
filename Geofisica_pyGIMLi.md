@@ -1,8 +1,8 @@
 Instrucciones para instalar pyGIMLi y paquetes relacionados en un ambiente virtual con miniconda.
 
-1. Instalar [Positron] (https://positron.posit.co/download.html)
-2. Instalar [Quarto] (https://quarto.org/docs/get-started/)
-3. Instalar [miniconda] (https://www.anaconda.com/download), le dan “Skip registration” y descargan la versión para su computadora
+1. Instalar [Positron](https://positron.posit.co/download.html)
+2. Instalar [Quarto](https://quarto.org/docs/get-started/)
+3. Instalar [miniconda](https://www.anaconda.com/download), le dan “Skip registration” y descargan la versión para su computadora
 4. Crear el ambiente para pyGIMLi (“pg”), en el Anaconda Prompt poner: `conda create -n pg -c gimli -c conda-forge "pygimli>=1.5.0”`
 5. Activar ambiente “pg”: `conda activate pg`
 6. Agregar canales para buscar paquetes: `conda config --add channels gimli --add channels conda-forge`
