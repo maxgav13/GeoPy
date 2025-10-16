@@ -1,4 +1,4 @@
-vs_file = 'Refrapy/sample data/prueba/picks/prueba.vs'
+vs_file = 'SRT/sample data/prueba/picks/prueba.vs'
 sgt_file = vs_file.replace(".vs", "_vs.sgt")
 # sgt_file = 'Refrapy/sample data/prueba/picks/prueba_vs.sgt'
 

@@ -24,7 +24,7 @@ from pygimli.frameworks import PriorModelling
 Cargamos los datos con `ert.load("filename.dat")` que soporta diferentes tipos de formatos.
 
 ```{python}
-data = ert.load('PyGimli/ERT/Wenner_1_2.dat', verbose=True)
+data = ert.load('ERT/Wenner_1_2.dat', verbose=True)
 print(data)
 tomocode = "Wenner-1" # Código del perfil, nombre a usar en archivos de salida
 ```
@@ -49,7 +49,7 @@ print(f"Diferencia de elevación: {deltaZ:.2f} m")
 Si no se tiene incluida la topografía en el archivo o no la reconoce se puede agregar por medio de un archivo (x,y), si se tiene encabezado de columnas se usa `skiprows=1` si no se usa `skiprows=0`. El archivo de topografía tiene que comprender los extremos del perfil para evitar extrapolación.
 
 ```{python}
-topo = np.loadtxt('PyGimli/ERT/DD_topo.txt', skiprows=1)
+topo = np.loadtxt('ERT/DD_topo.txt', skiprows=1)
 ```
 
 Se interpolan los datos topográficos a las posiciones de los electrodos (sensores), el argumento `k` de `make_interp_spline` define si la interpolación es lineal (1) o con b-splines (3).
@@ -171,7 +171,7 @@ ax.xaxis.set_major_locator(MaxNLocator(integer=True))
 plt.semilogy(chihx, chihy, 'o-', color='b')
 plt.show()
 
-# plt.savefig('PyGimli/ERT/ert-' + tomocode + '-chi2-iter.png', dpi=300, bbox_inches='tight')
+# plt.savefig('ERT/ert-' + tomocode + '-chi2-iter.png', dpi=300, bbox_inches='tight')
 ```
 
 ### Valores mínimos y máximos
@@ -193,7 +193,7 @@ rlist = ["Resistividades del modelo\n",
          f"\u03C7^2: {mgr_ert.inv.chi2():.2f}\n",
          f"Rel RMS: {mgr_ert.inv.relrms():.2f} %\n"]
 
-with open("PyGimli/ERT/resistividades-" + tomocode + "-.txt", "w") as f:
+with open("ERT/resistividades-" + tomocode + "-.txt", "w") as f:
     f.writelines(rlist)
 ```
 
@@ -212,19 +212,19 @@ Podemos ver los resultados de diferentes formas:
 _ = mgr_ert.showResultAndFit()
 # np.testing.assert_approx_equal(ert.inv.chi2(), 1.10883, significant=3)
 
-# plt.savefig('PyGimli/ERT/tomo-res-fit.png', dpi=300, bbox_inches='tight')
+# plt.savefig('ERT/tomo-res-fit.png', dpi=300, bbox_inches='tight')
 ```
 
 ```{python}
 mgr_ert.showFit()
 
-# plt.savefig('PyGimli/ERT/tomo-fit.png', dpi=300, bbox_inches='tight')
+# plt.savefig('ERT/tomo-fit.png', dpi=300, bbox_inches='tight')
 ```
 
 ```{python}
 mgr_ert.showMisfit()
 
-# plt.savefig('PyGimli/ERT/tomo-misfit.png', dpi=300, bbox_inches='tight')
+# plt.savefig('ERT/tomo-misfit.png', dpi=300, bbox_inches='tight')
 ```
 
 Opciones gráficas para mostrar los resultados.
@@ -259,7 +259,7 @@ cb.set_label('Resistividad ($\Omega$m)', fontsize=11, fontweight='normal')
 print(f"\u03C7^2: {mgr_ert.inv.chi2():.2f}")
 print(f"Rel RMS: {mgr_ert.inv.relrms():.2f}%")
 
-# plt.savefig('PyGimli/ERT/tomo-res-' + tomocode + '-.png', dpi=300, bbox_inches='tight')
+# plt.savefig('ERT/tomo-res-' + tomocode + '-.png', dpi=300, bbox_inches='tight')
 ```
 
 ## Creación y regularización de la malla
@@ -280,7 +280,7 @@ plc = mt.createParaMeshPLC(data,
 mesh = mt.createMesh(plc, quality=34.4, smooth=True)
 ax, cb = pg.show(mesh, markers=True, showMesh=True)
 
-# plt.savefig('PyGimli/ERT/tomo-mesh-' + tomocode + '-.png', dpi=300, bbox_inches='tight')
+# plt.savefig('ERT/tomo-mesh-' + tomocode + '-.png', dpi=300, bbox_inches='tight')
 ```
 
 Se aplica la nueva malla al administrador, se aplican las regularizaciones deseadas, y se invierte el modelo.
@@ -320,7 +320,7 @@ plt.tick_params(labelsize=12)
 
 plt.show()
 
-# plt.savefig('PyGimli/ERT/res-model-fit-' + tomocode + '-.png', dpi=300, bbox_inches='tight')
+# plt.savefig('ERT/res-model-fit-' + tomocode + '-.png', dpi=300, bbox_inches='tight')
 ```
 
 ```{python}
@@ -347,7 +347,7 @@ cb.set_label('Resistividad ($\Omega$m)')
 print(f"\u03C7^2: {mgr_ert.inv.chi2():.2f}")
 print(f"Rel RMS: {mgr_ert.inv.relrms():.2f}%")
 
-# plt.savefig('PyGimli/ERT/tomo-res-' + tomocode + '-.png', dpi=300, bbox_inches='tight')
+# plt.savefig('ERT/tomo-res-' + tomocode + '-.png', dpi=300, bbox_inches='tight')
 ```
 
 ## Modelo como contornos
@@ -367,7 +367,7 @@ ax.set_aspect(aspect=1)
 ax.set_frame_on(False)
 cb.set_label('Resistividad ($\Omega$m)')
 
-# plt.savefig('PyGimli/ERT/tomo-res-contour-' + tomocode + '-.png', dpi=300, bbox_inches='tight')
+# plt.savefig('ERT/tomo-res-contour-' + tomocode + '-.png', dpi=300, bbox_inches='tight')
 ```
 
 ### Opción 2 (más suavizada)
@@ -394,7 +394,7 @@ ax.set_xlabel('Distancia (m)')
 ax.set_aspect(aspect=1)
 cbar.set_label('Resistividad ($\Omega$m)')
 
-# plt.savefig('PyGimli/ERT/tomo-res-contour-' + tomocode + '-.png', dpi=300, bbox_inches='tight')
+# plt.savefig('ERT/tomo-res-contour-' + tomocode + '-.png', dpi=300, bbox_inches='tight')
 ```
 
 ```{python}
@@ -428,7 +428,7 @@ ax.set_aspect(aspect=1)
 ax.set_frame_on(False)
 cb.set_label('Conductividad (mS/m)')
 
-# plt.savefig('PyGimli/ERT/tomo-cond-' + tomocode + '-.png', dpi=300, bbox_inches='tight')
+# plt.savefig('ERT/tomo-cond-' + tomocode + '-.png', dpi=300, bbox_inches='tight')
 ```
 
 ## Perfil 1D en el centro de la tomografia
@@ -454,7 +454,7 @@ ax.set_xlabel(r"$\rho$ ($\Omega$m)")
 ax.set_ylabel("Z (m)")
 ax.grid(True)
 
-# plt.savefig('PyGimli/ERT/tomo-res-' + tomocode + '-1D-' + f"{x[0]:.0f} m" + ".png", dpi=300, bbox_inches='tight')
+# plt.savefig('ERT/tomo-res-' + tomocode + '-1D-' + f"{x[0]:.0f} m" + ".png", dpi=300, bbox_inches='tight')
 ```
 
 ## Salvar resultados
@@ -462,11 +462,11 @@ ax.grid(True)
 Salva todo
 
 ```{python}
-mgr_ert.saveResult('PyGimli/ERT/tomo-res-' + tomocode + '/')
+mgr_ert.saveResult('ERT/tomo-res-' + tomocode + '/')
 ```
 
 Salva los datos en un formato unificado
 
 ```{python}
-data.save('PyGimli/ERT/Wenner_py.dat')
+data.save('ERT/Wenner_py.dat')
 ```

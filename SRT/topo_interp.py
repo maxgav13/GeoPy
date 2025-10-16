@@ -1,8 +1,8 @@
 import numpy as np
 from scipy.interpolate import make_interp_spline
 
-topo_file = 'PyGimli/ERT/DD_topo.txt'
-pts_file = 'PyGimli/SRT/pts.txt'
+topo_file = 'ERT/DD_topo.txt'
+pts_file = 'SRT/pts.txt'
 
 topo = np.loadtxt(topo_file, skiprows=1)
 pts = np.loadtxt(pts_file, skiprows=1)

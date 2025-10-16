@@ -25,11 +25,11 @@ from pygimli.viewer.mpl import drawModel1D
 Cargamos los datos del sondeo eléctrico vertical (VES) desde un archivo de texto, usando la librería `pandas`. El archivo contiene columnas para la separación AB/2, MN y la resistividad aparente. Ajustamos los nombres de las columnas para facilitar su uso posterior. Los datos se pueden cargar también con `numpy` y luego convertirlos a un DataFrame de `pandas`.
 
 ```{python}
-data = pd.read_table("PyGimli/VES/curso_geofisica/datos/SEV1.TXT")
+data = pd.read_table("VES/curso_geofisica/datos/SEV1.TXT")
 print(data.head())
 vescode = "SEV-1" # Código del sondeo, nombre a usar en archivos de salida
 
-# ab2, mn, roa = np.genfromtxt("PyGimli/VES/curso_geofisica/datos/SEV1.TXT", 
+# ab2, mn, roa = np.genfromtxt("VES/curso_geofisica/datos/SEV1.TXT", 
 #                              skip_header=1,
 #                              unpack=True)
 
@@ -85,7 +85,7 @@ ax.set_ylabel(r"Resistividad aparente $\rho_a$ ($\Omega$m)")
 ax.set_xlabel("AB/2 (m)")
 ax.grid(True, which='both')
 
-# plt.savefig("PyGimli/VES/" + vescode + ".png", dpi=300, bbox_inches='tight')
+# plt.savefig("VES/" + vescode + ".png", dpi=300, bbox_inches='tight')
 ```
 
 ## Ajuste manual
@@ -199,7 +199,7 @@ plt.title('Cambio de $\chi^2$ y Rel RMS\n con Marquardt', fontsize=16, fontweigh
 fig.tight_layout()
 plt.show()
 
-# plt.savefig("PyGimli/VES/" + vescode + "-chi2-marquardt-.png", dpi=300, bbox_inches='tight')
+# plt.savefig("VES/" + vescode + "-chi2-marquardt-.png", dpi=300, bbox_inches='tight')
 ```
 
 Es el cambio en $\chi^2$ significativo al aumentar el número de capas? Usamos la prueba estadística Chi-cuadrado para responder a esta pregunta.
@@ -255,7 +255,7 @@ plt.title('Cambio de $\chi^2$ y Rel RMS\n con VESManager', fontsize=16, fontweig
 fig.tight_layout()
 plt.show()
 
-# plt.savefig("PyGimli/VES/" + vescode + "-chi2-vesmanager-.png", dpi=300, bbox_inches='tight')
+# plt.savefig("VES/" + vescode + "-chi2-vesmanager-.png", dpi=300, bbox_inches='tight')
 ```
 
 Es el cambio en $\chi^2$ significativo al aumentar el número de capas? Usamos la prueba estadística Chi-cuadrado para responder a esta pregunta.
@@ -349,7 +349,7 @@ ax.set_ylabel(r"Resistividad aparente $\rho_a$ ($\Omega$m)")
 ax.set_xlabel("AB/2 (m)")
 ax.set_title("Datos y ajuste\n" + f" ({ncapas} capas)")
 
-# plt.savefig("PyGimli/VES/" + vescode + "-fit-modelos-" + str(ncapas) + "capas.png", dpi=300, bbox_inches='tight')
+# plt.savefig("VES/" + vescode + "-fit-modelos-" + str(ncapas) + "capas.png", dpi=300, bbox_inches='tight')
 ```
 
 ```{python}
@@ -368,7 +368,7 @@ ax.grid(True, which='both')
 plt.tight_layout()
 plt.show()
 
-# plt.savefig("PyGimli/VES/" + vescode + "-modelos-" + str(ncapas) + "capas.png", dpi=300, bbox_inches='tight')
+# plt.savefig("VES/" + vescode + "-modelos-" + str(ncapas) + "capas.png", dpi=300, bbox_inches='tight')
 ```
 
 ## Ajuste final y análisis del modelo
@@ -408,7 +408,7 @@ veslist = ["Modelo de resistividad\n",
            f"\u03C7^2: {Chi2:.2f}\n",
            f"Rel RMS: {RelRMS:.2f} %\n"]
 
-with open("PyGimli/VES/" + vescode + "-modelo-" + str(ncapas) + "capas.txt", "w") as f:
+with open("VES/" + vescode + "-modelo-" + str(ncapas) + "capas.txt", "w") as f:
     f.writelines(veslist)
 ```
 
@@ -450,7 +450,7 @@ ax[1].yaxis.set_ticks_position('right')
 plt.tight_layout()
 plt.show()
 
-# plt.savefig("PyGimli/VES/" + vescode + "-fit-" + str(ncapas) + "capas.png", dpi=300, bbox_inches='tight')
+# plt.savefig("VES/" + vescode + "-fit-" + str(ncapas) + "capas.png", dpi=300, bbox_inches='tight')
 ```
 
 ### Incertidumbre del modelo
@@ -473,7 +473,7 @@ plt.title("Matriz de correlación\n del modelo" + f" ({ncapas} capas)")
 plt.tight_layout()
 plt.show()
 
-# plt.savefig("PyGimli/VES/" + vescode + "-correl-" + str(ncapas) + "capas.png", dpi=300, bbox_inches='tight')
+# plt.savefig("VES/" + vescode + "-correl-" + str(ncapas) + "capas.png", dpi=300, bbox_inches='tight')
 ```
 
 ```{python}
@@ -497,5 +497,5 @@ ax.set_title("Modelo de resistividad\n" + f" de {ncapas} capas" + ", con barras 
 plt.tight_layout()
 plt.show()
 
-# plt.savefig("PyGimli/VES/" + vescode + "-fit-errorbars-" + str(ncapas) + "capas.png", dpi=300, bbox_inches='tight')
+# plt.savefig("VES/" + vescode + "-fit-errorbars-" + str(ncapas) + "capas.png", dpi=300, bbox_inches='tight')
 ```

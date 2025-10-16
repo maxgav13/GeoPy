@@ -11,6 +11,10 @@ Instrucciones para instalar pyGIMLi y paquetes relacionados en un ambiente virtu
     * `pip install pmw`
     * `pip install pyrefra`
 
+En vez de los pasos 4 a 7, pueden correr este comando que hace todo junto:
+    - En Windows `conda env create -f environment-win.yml`
+    - En Mac `conda env create -f environment-mac.yml`
+
 Para usar el ambiente “pg” en Positron seleccionarlo de la lista de interpretadores arriba a la derecha y abrir el folder del proyecto.
 
 Para usar `refrapick.py` y `refrainv.py`, ya sea en el Anaconda Prompt o Terminal de Positron, ir a la carpeta Refrapy y correr la aplicación con `python Refrapick.py` o `python Refrainv.py`.

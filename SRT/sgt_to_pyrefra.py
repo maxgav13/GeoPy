@@ -4,7 +4,7 @@ shots = [2001, 2002, 2003, 2004, 2005] # número de disparos (nombre de los arch
 n_geophones = 24 # número de geófonos
 error = 0.003  # error fijo en segundos
 
-sgt_file = 'PyGimli/SRT/prueba.sgt'
+sgt_file = 'SRT/prueba.sgt'
 pyrefra_file = sgt_file.replace(".sgt", ".dat")
 
 t = []
