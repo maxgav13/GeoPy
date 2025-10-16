@@ -320,7 +320,7 @@ plt.tick_params(labelsize=12)
 
 plt.show()
 
-# plt.savefig('ERT/res-model-fit-' + tomocode + '-.png', dpi=300, bbox_inches='tight')
+# plt.savefig('ERT/res-fit-err-' + tomocode + '-.png', dpi=300, bbox_inches='tight')
 ```
 
 ```{python}

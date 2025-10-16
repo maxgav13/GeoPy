@@ -242,7 +242,7 @@ plt.tick_params(labelsize=12)
 
 plt.show()
 
-# plt.savefig('SRT/refra-model-fit-' + tomocode + '-.png', dpi=300, bbox_inches='tight')
+# plt.savefig('SRT/tomo-fit-err-' + tomocode + '-.png', dpi=300, bbox_inches='tight')
 ```
 
 ### Modelo (tomografía)
