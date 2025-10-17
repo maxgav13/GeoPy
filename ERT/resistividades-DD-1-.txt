@@ -1,7 +1,0 @@
-Resistividades del modelo
-Mínima: 61.73 ohm.m
-Máxima: 885.0 ohm.m
-
-Estadísticas del ajuste
-χ^2: 0.70
-Rel RMS: 3.62 %
