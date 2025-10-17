@@ -7,7 +7,8 @@ jupyter: python3
 
 # Inversión de refracción sísmica
 
-Este ejemplo sencillo muestra cómo usar el Refraction Manager para invertir datos de refracción sísmica. Se usan datos del ejemplo de Koenigsee, que pueden encontrarse en [repositorio de ejemplos de pyGIMLi](https://github.com/gimli-org/example-data/blob/master/traveltime/koenigsee.sgt).
+Este ejemplo sencillo muestra cómo usar el Refraction Manager para invertir datos de refracción sísmica. 
+
 
 ```{python}
 import numpy as np
@@ -20,14 +21,11 @@ import pygimli.physics.traveltime as tt
 from pygimli.frameworks import PriorModelling
 ```
 
-<!-- La función `pg.getExampleData` descarga los datos. Observando los datos hay 714 datos, 63 sensores (disparos y geófonos), con columnas s (disparo), g (geófono), y t (tiempo). -->
-
 Se pueden cargar datos mediante `tt.load("filename.sgt")`, siempre cumpliendo con la estructura de columnas: s (disparo), g (geófono), y t (tiempo en s).
 
 ## Cargar datos
 
 ```{python}
-# data = pg.getExampleData("traveltime/koenigsee.sgt", verbose=True)
 data = tt.load("SRT/picks/prueba_vs.sgt")
 data.sortSensorsX()
 print(data)
