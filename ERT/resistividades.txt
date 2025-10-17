@@ -1,3 +1,0 @@
-Resistividades del modelo
-Mínima: 10 ohm.m
-Máxima: 300 ohm.m

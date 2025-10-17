@@ -345,9 +345,17 @@ ax.legend(loc='lower right', fontsize='small') # agrega leyenda
 
 ## Perfil 1D en el centro de la tomografia
 
+Por defecto se toma el centro del perfil, pero se puede cambiar la posición en `pos1D`.
+
 ```{python}
-x = np.repeat(max(pg.x(data))/2, 50)
-y = np.linspace(0,-20, 50)
+pos1D = max(pg.x(data))/2  # posición del perfil 1D
+reps = 50 # número de puntos en el perfil
+
+bspl2 = make_interp_spline(pg.x(data), pg.y(data), k=3)
+y_i = bspl2(pos1D)
+
+x = np.repeat(pos1D, reps)
+y = np.linspace(y_i, result.ymin(), reps)
 ```
 
 ```{python}
@@ -358,7 +366,7 @@ fopDP = PriorModelling(para, posVec)
 ```
 
 ```{python}
-fig, ax = plt.subplots(figsize=(3,5))
+fig, ax = plt.subplots(figsize=(4,5))
 velSmooth = fopDP(mgr_refra.model)
 ax.plot(velSmooth, y, color='orange', label="SRT")
 # ax.semilogx(velSmooth, y, color='orange', label="SRT")
