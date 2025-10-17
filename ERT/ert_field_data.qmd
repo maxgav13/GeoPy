@@ -26,7 +26,7 @@ Cargamos los datos con `ert.load("filename.dat")` que soporta diferentes tipos d
 ```{python}
 data = ert.load('ERT/DipoleDipole_1.dat', verbose=True)
 print(data)
-tomocode = "Wenner-1" # Código del perfil, nombre a usar en archivos de salida
+tomocode = "DD-1" # Código del perfil, nombre a usar en archivos de salida
 ```
 
 Exploramos la topografía en los datos, si la tiene.
@@ -107,6 +107,13 @@ data.estimateError(relativeError=0.03, absoluteUError=5e-5)
 _ = data.show(data['err']*100, label='error estimate (%)')
 ```
 
+## Pseudosección
+
+```{python}
+ax, cb = ert.showData(data, vals=data['rhoa'], cMap='Spectral_r', logScale=True)
+cb.set_label('Resistividad aparente ($\Omega$m)', fontsize=11, fontweight='normal')
+```
+
 ## Filtrado de datos
 
 En caso de requerir filtrar (limpiar) los datos de acuerdo a valores de alguna propiedad se pueden marcar como inválidos, o usar el método `.remove` sobre los datos para removerlos definitivamente.
@@ -119,13 +126,6 @@ data
 ```{python}
 data.remove(data['rhoa'] > 100)
 data
-```
-
-## Pseudosección
-
-```{python}
-ax, cb = ert.showData(data, vals=data['rhoa'])
-cb.set_label('Resistividad aparente ($\Omega$m)', fontsize=11, fontweight='normal')
 ```
 
 ## Inversión de los datos
