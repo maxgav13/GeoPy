@@ -1,6 +1,6 @@
 # GeoPy
 
-Rutinas para el análisis e inversión de datos geofísicos usando pyGIMLi.
+Rutinas para el análisis e inversión de datos geofísicos usando [pyGIMLi](https://www.pygimli.org/index.html).
 
 Para configurar PyGimli ver [Geofísica con PyGimli](./Geofisica_pyGIMLi.md).
 
