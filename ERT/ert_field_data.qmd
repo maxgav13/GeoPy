@@ -139,11 +139,23 @@ mgr_ert = ert.ERTManager(data)
 ```
 
 La inversión se puede correr con parámetros por defecto o se pueden ajustar:
-- `lam`: suavizado, mientras más alto mayor suavizado (20 es el defecto)
-- `paraDX`: división de elementos entre sensores (0.5 es 1 nodo adicional, 0.33 son 2)
-- `paraMaxCellSize`: área máxima de los elementos de la malla
-- `paraDepth`: profundidad de la malla
-- `quality`: calidad (refinado) de la malla, valores entre 33 y 35 son recomendados
+
+-   `lam`: suavizado, mientras más alto mayor suavizado (20 es el defecto)
+-   `paraDX`: división de elementos entre sensores (0.5 es 1 nodo adicional, 0.33 son 2)
+-   `paraMaxCellSize`: área máxima de los elementos de la malla
+-   `paraDepth`: profundidad de la malla
+-   `quality`: calidad (refinado) de la malla, valores entre 33 y 35 son recomendados
+
+Adicionalmente se puede ajustar la regularización:
+
+-   `zWeight`: relación entre vertical/horizontal, valores menores a 1 enfatizan estructuras horizontales, mayores a 1 estructuras verticales
+-   `cType`: tipo de regularizacion, 1 es el defecto, 2 es mas suavizado
+-   `correlationLengths`: lista `[h, v]` indicando la distancia de correlacion horizontal y vertical
+-   `limits`: lista `[min max]` indicando los limites de los valores de la variable a invertir
+
+```{python}
+mgr_ert.inv.setRegularization(cType=1, zWeight=0.5)
+```
 
 ```{python}
 mod = mgr_ert.invert(data, 
@@ -206,10 +218,7 @@ with open("ERT/resistividades-" + tomocode + "-.txt", "w") as f:
 ax, cb = mgr_ert.showResult()
 ```
 
-Podemos ver los resultados de diferentes formas:
-- Resultado y ajuste
-- Ajuste
-- Diferencia con el ajuste
+Podemos ver los resultados de diferentes formas: - Resultado y ajuste - Ajuste - Diferencia con el ajuste
 
 ```{python}
 _ = mgr_ert.showResultAndFit()
@@ -265,35 +274,6 @@ print(f"Rel RMS: {mgr_ert.inv.relrms():.2f}%")
 # plt.savefig('ERT/figs/tomo-res-' + tomocode + '-.png', dpi=300, bbox_inches='tight')
 ```
 
-## Creación y regularización de la malla
-
-Se pueden cambiar parámetros en la malla:
-- `zWeight`: relación entre vertical/horizontal, valores menores a 1 enfatizan estructuras horizontales, mayores a 1 estructuras verticales
-- `cType`: tipo de regularizacion, 1 es el defecto, 2 es mas suavizado
-- `correlationLengths`: lista `[h, v]` indicando la distancia de correlacion horizontal y vertical
-- `limits`: lista `[min max]` indicando los limites de los valores de la variable a invertir
-
-```{python}
-plc = mt.createParaMeshPLC(data, 
-                           paraDX=.5, 
-                           paraDepth=50, 
-                           boundary=0.2, 
-                           paraMaxCellSize=15
-                           )
-mesh = mt.createMesh(plc, quality=34.4, smooth=True)
-ax, cb = pg.show(mesh, markers=True, showMesh=True)
-
-# plt.savefig('ERT/figs/tomo-mesh-' + tomocode + '-.png', dpi=300, bbox_inches='tight')
-```
-
-Se aplica la nueva malla al administrador, se aplican las regularizaciones deseadas, y se invierte el modelo.
-
-```{python}
-mgr_ert.setMesh(mesh)
-mgr_ert.inv.setRegularization(cType=1, zWeight=0.5)
-mgr_ert.invert()
-```
-
 ### Errores entre observados y modelados
 
 ```{python}
@@ -324,14 +304,6 @@ plt.tick_params(labelsize=12)
 plt.show()
 
 # plt.savefig('ERT/figs/res-fit-err-' + tomocode + '-.png', dpi=300, bbox_inches='tight')
-```
-
-```{python}
-rmin = min(mgr_ert.model)
-rmax = max(mgr_ert.model)
-
-print(f"Rmin: {rmin:.1f} ohm.m")
-print(f"Rmax: {rmax:.1f} ohm.m")
 ```
 
 ## Modelo (tomografía)
@@ -375,7 +347,7 @@ cb.set_label('Resistividad ($\Omega$m)')
 
 ### Opción 2 (más suavizada)
 
-Es necesario convertir los datos de celdas a puntos. 
+Es necesario convertir los datos de celdas a puntos.
 
 ```{python}
 res_points = pg.core.cellDataToPointData(mgr_ert.paraDomain, mgr_ert.model)
@@ -446,9 +418,11 @@ reps = 50 # número de puntos en el perfil
 
 bspl2 = make_interp_spline(pg.x(data), pg.y(data), k=3)
 y_i = bspl2(pos1D)
+y_f = mgr_refra.paraDomain.ymin() # profundidad final del perfil 1D escogida automáticamente
+# y_f = -31.0  # profundidad final del perfil 1D escogida manualmente
 
 x = np.repeat(pos1D, reps)
-y = np.linspace(y_i, result.ymin(), reps)
+y = np.linspace(y_i, y_f, reps)
 ```
 
 ```{python}
@@ -469,7 +443,7 @@ ax.set_ylabel("Z (m)")
 ax.set_title("Perfil 1D" + f" - x={pos1D} m")
 ax.grid(True)
 
-# plt.savefig('ERT/figs/tomo-res-' + tomocode + '-1D-' + f"{x[0]:.0f} m" + ".png", dpi=300, bbox_inches='tight')
+# plt.savefig('ERT/figs/tomo-res-' + tomocode + '-1D-' + f"{pos1D} m" + ".png", dpi=300, bbox_inches='tight')
 ```
 
 ## Salvar resultados
