@@ -466,6 +466,7 @@ ax.semilogx(resSmooth, y, color='orange', label="ERT")
 ax.set_xlabel(r"$\rho$ ($\Omega$m)")
 ax.tick_params(axis='x', which='minor', labelsize='small', labelrotation=10)
 ax.set_ylabel("Z (m)")
+ax.set_title("Perfil 1D" + f" - x={pos1D} m")
 ax.grid(True)
 
 # plt.savefig('ERT/figs/tomo-res-' + tomocode + '-1D-' + f"{x[0]:.0f} m" + ".png", dpi=300, bbox_inches='tight')

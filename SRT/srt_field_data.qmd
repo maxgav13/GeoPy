@@ -261,14 +261,14 @@ kw_refra = dict(cMin = 200,
 ```{python}
 # ax, cbar = pg.show(mgr_refra.paraDomain, mgr_refra.model, **kw_refra, figsize=(8,4))
 ax, cbar = mgr_refra.showResult(**kw_refra)
-rays = mgr_refra.drawRayPaths(ax=ax, color="w", lw=0.3, alpha=1)
+rays = mgr_refra.drawRayPaths(ax=ax, color="w", lw=0.3, alpha=1) # muestra los rayos
 ax.scatter(sx,sy+.2,marker='v',color='r',s=30,alpha=.75,label='Disparo')
 ax.scatter(gx,gy+.05,marker='o',color='k',s=15,alpha=.5,label='Geófono')
 ax.set_title('Rel RMS={:.2f} %, $\chi^2$={:.2f}'.format(mgr_refra.inv.relrms(), mgr_refra.inv.chi2()))
 ax.set_ylabel('Z (m)')
 ax.set_xlabel('Distancia (m)')
 # ax.set_ylim(bottom=-40) # ajusta el limite inferior del eje-y
-ax.set_aspect(aspect=1) # ajusta la relacion de aspecto
+# ax.set_aspect(aspect=1) # ajusta la relacion de aspecto
 cbar.set_label('Velocidad (m/s)')
 ax.legend(loc='lower right', fontsize='small') # agrega leyenda
 
@@ -323,7 +323,7 @@ kw_refra2 = dict(levels = np.arange(500,3500,500),
 ```
 
 ```{python}
-ax, cbar = mgr_refra.showResult(nLevs=6, **kw_refra)
+ax, cbar = mgr_refra.showResult(**kw_refra)
 ax.scatter(sx,sy+.2,marker='v',color='r',s=30,alpha=.75,label='Disparo')
 ax.scatter(gx,gy+.05,marker='o',color='k',s=15,alpha=.5,label='Geófono')
 pg.viewer.mpl.drawField(ax, mgr_refra.paraDomain, refra_points
@@ -351,9 +351,11 @@ reps = 50 # número de puntos en el perfil
 
 bspl2 = make_interp_spline(pg.x(data), pg.y(data), k=3)
 y_i = bspl2(pos1D)
+y_f = mgr_refra.paraDomain.ymin() # profundidad final del perfil 1D escogida automáticamente
+# y_f = -31.0  # profundidad final del perfil 1D escogida manualmente
 
 x = np.repeat(pos1D, reps)
-y = np.linspace(y_i, result.ymin(), reps)
+y = np.linspace(y_i, y_f, reps)
 ```
 
 ```{python}
@@ -370,9 +372,10 @@ ax.plot(velSmooth, y, color='orange', label="SRT")
 # ax.semilogx(velSmooth, y, color='orange', label="SRT")
 ax.set_xlabel(r"V (m/s)")
 ax.set_ylabel("Z (m)")
+ax.set_title("Perfil 1D" + f" - x={pos1D} m")
 ax.grid(True)
 
-# plt.savefig('SRT/figs/tomo-refra-' + tomocode + '-1D-' + f"{x[0]:.0f} m" + ".png", dpi=300, bbox_inches='tight')
+# plt.savefig('SRT/figs/tomo-refra-' + tomocode + '-1D-' + f"{pos1D} m" + ".png", dpi=300, bbox_inches='tight')
 ```
 
 ## Salvar resultados
