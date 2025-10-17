@@ -482,5 +482,5 @@ mgr_ert.saveResult('ERT/tomo-res-' + tomocode + '/')
 Salva los datos en un formato unificado
 
 ```{python}
-data.save('ERT/datos/Wenner_py.dat')
+data.save('ERT/datos/DD_py.dat')
 ```
