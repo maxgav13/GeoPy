@@ -124,7 +124,8 @@ data
 ## Pseudosección
 
 ```{python}
-ert.showData(data, vals=data['rhoa'])
+ax, cb = ert.showData(data, vals=data['rhoa'])
+cb.set_label('Resistividad aparente ($\Omega$m)', fontsize=11, fontweight='normal')
 ```
 
 ## Inversión de los datos
@@ -335,12 +336,12 @@ print(f"Rmax: {rmax:.1f} ohm.m")
 
 ```{python}
 # ax, cb = pg.show(mgr_ert.paraDomain, mgr_ert.model, nLevs=8, **kw_ert, figsize=(8,4), coverage=mgr_ert.coverage())
-ax, cb = mgr_ert.showResult(nLevs=8,**kw_ert)
+ax, cb = mgr_ert.showResult(nLevs=8, **kw_ert)
 # ax.set_title(f"Rel RMS: {mgr_ert.inv.relrms():.2f} %")
 ax.set_title('Rel RMS={:.2f} %, $\chi^2$={:.2f}'.format(mgr_ert.inv.relrms(), mgr_ert.inv.chi2()))
 ax.set_ylabel('Z (m)')
 ax.set_xlabel('Distancia (m)')
-ax.set_aspect(aspect=1)
+# ax.set_aspect(aspect=1)
 ax.set_frame_on(False)
 cb.set_label('Resistividad ($\Omega$m)')
 
@@ -363,7 +364,7 @@ ax, cb = mgr_ert.showResult(nCols=5, nLevs=6, **kw_ert)
 ax.set_title('Rel RMS={:.2f} %, $\chi^2$={:.2f}'.format(mgr_ert.inv.relrms(), mgr_ert.inv.chi2()))
 ax.set_ylabel('Z (m)')
 ax.set_xlabel('Distancia (m)')
-ax.set_aspect(aspect=1)
+# ax.set_aspect(aspect=1)
 ax.set_frame_on(False)
 cb.set_label('Resistividad ($\Omega$m)')
 
@@ -391,7 +392,7 @@ pg.viewer.mpl.drawSensors(ax, data.sensorPositions(),
 ax.set_title('Rel RMS={:.2f} %, $\chi^2$={:.2f}'.format(mgr_ert.inv.relrms(), mgr_ert.inv.chi2()))
 ax.set_ylabel('Z (m)')
 ax.set_xlabel('Distancia (m)')
-ax.set_aspect(aspect=1)
+# ax.set_aspect(aspect=1)
 cbar.set_label('Resistividad ($\Omega$m)')
 
 # plt.savefig('ERT/tomo-res-contour-' + tomocode + '-.png', dpi=300, bbox_inches='tight')
@@ -421,12 +422,12 @@ result["cond"] = 1 / result["res"] * 1000
 ```
 
 ```{python}
-ax, cb = pg.show(result, result["cond"], cMap="RdYlBu", logScale=True, nLevs=10, figsize=(8,4))
+ax, cb = pg.show(result, result["cond"], cMap="RdYlBu", logScale=True, nLevs=10, figsize=(8,4), coverage=mgr_ert.coverage())
 pg.viewer.mpl.drawSensors(ax, data.sensorPositions(), 
                           sm='o', diam=3, color='m', alpha=.5)
 ax.set_ylabel('Z (m)')
 ax.set_xlabel('Distancia (m)')
-ax.set_aspect(aspect=1)
+# ax.set_aspect(aspect=1)
 ax.set_frame_on(False)
 cb.set_label('Conductividad (mS/m)')
 
