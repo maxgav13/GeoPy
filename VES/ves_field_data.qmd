@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 from scipy.stats import chi2
 import pygimli as pg
-from pygimli.physics.ves import VESManager, VESModelling
+from pygimli.physics.ves import VESManager, VESModelling, VESRhoModelling
 from pygimli.frameworks.resolution import modelCovariance
 from pygimli.frameworks import MarquardtInversion
 from pygimli.viewer.mpl import drawModel1D
@@ -140,7 +140,40 @@ ax.grid(True, which='both')
 ax.legend(loc='best')
 ```
 
-## Inversión con diferentes métodos
+## Inversión con espesores fijos
+
+Si se tiene conocimiento previo de los espesores de las capas (pozo, estudios previos, etc.), se puede realizar una inversión con estos espesores fijos, ajustando solo las resistividades. Aquí vamos a usar los espesores definidos en el modelo manual.
+
+```{python}
+f_r = VESRhoModelling(thk=espesores, ab2=ab2, mn2=mn2, nLayers=4)
+inv_r = pg.Inversion(fop=f_r, verbose=False)
+res_r = inv_r.run(rhoa, err)
+
+print(f"\u03C7^2: {inv_r.chi2():.2f}")
+print(f"Rel RMS: {inv_r.relrms():.2f} %")
+```
+
+Vemos el modelo y su ajuste con los datos. La línea de código comentada permite comparar con el modelo manual definido anteriormente.
+
+```{python}
+fig, ax = plt.subplots(figsize=(4,5))
+drawModel1D(ax, espesores, res_r, color='blue', label="RhoMod", plot='semilogx')
+# drawModel1D(model=modelM, ax=ax, color='orange', label="Manual", plot='semilogx')
+ax.set_xlabel(r"Resistividad $\rho$ ($\Omega$m)")
+ax.set_ylabel("Profundidad (m)")
+ax.grid(True, which='both')
+ax.legend(loc='best')
+```
+
+```{python}
+fig, ax = plt.subplots(figsize=(7,4))
+ax.loglog(ab2, rhoa, 'o', color="C0", label='datos')
+ax.loglog(ab2, inv_r.response, '-', color="C5", label='ajuste')
+ax.grid(True, which='both')
+ax.legend(loc='best')
+```
+
+## Inversión con diferentes métodos y número de capas
 
 Primero realizamos un ajuste con varias capas para observar la variación de los estadísticos de ajuste ($\chi^2$ y Rel RMS) con el número de capas. Esto nos ayuda a decidir el número óptimo de capas para la inversión final.
 
