@@ -132,8 +132,7 @@ ax.grid(True, which='both')
 ```{python}
 fig, ax = plt.subplots(figsize=(4,5))
 vesM.showFit(ax=ax)
-# drawModel1D(model=modelM, ax=ax, label="Modelo", plot='loglog')
-# ax.set_ylim(max(ab2)*1.1, min(ab2)*0.9)
+# drawModel1D(model=modelM, ax=ax, label="Modelo", plot='loglog'); ax.set_ylim(max(ab2)*1.1, min(ab2)*0.9)
 ax.set_xlabel(r"Resistividad $\rho$ ($\Omega$m)")
 ax.set_ylabel("AB/2 (m)")
 ax.grid(True, which='both')
@@ -148,21 +147,22 @@ Si se tiene conocimiento previo de los espesores de las capas (pozo, estudios pr
 f_r = VESRhoModelling(thk=espesores, ab2=ab2, mn2=mn2, nLayers=4)
 inv_r = pg.Inversion(fop=f_r, verbose=False)
 res_r = inv_r.run(rhoa, err)
+```
 
+```{python}
 print(f"\u03C7^2: {inv_r.chi2():.2f}")
 print(f"Rel RMS: {inv_r.relrms():.2f} %")
 ```
 
-Vemos el modelo y su ajuste con los datos. La línea de código comentada permite comparar con el modelo manual definido anteriormente.
+Vemos el modelo y su ajuste con los datos. La línea de código comentada permite comparar con el modelo manual definido anteriormente, así como mostrar la leyenda.
 
 ```{python}
 fig, ax = plt.subplots(figsize=(4,5))
-drawModel1D(ax, espesores, res_r, color='blue', label="RhoMod", plot='semilogx')
-# drawModel1D(model=modelM, ax=ax, color='orange', label="Manual", plot='semilogx')
+drawModel1D(ax, espesores, res_r, color='blue', label="Espesor fijo", plot='semilogx')
+# drawModel1D(model=modelM, ax=ax, color='orange', label="Manual", plot='semilogx'); ax.legend(loc='best')
 ax.set_xlabel(r"Resistividad $\rho$ ($\Omega$m)")
 ax.set_ylabel("Profundidad (m)")
 ax.grid(True, which='both')
-ax.legend(loc='best')
 ```
 
 ```{python}
@@ -375,7 +375,7 @@ fig, ax = plt.subplots(figsize=(6,4))
 
 ax.loglog(ab2, rhoa, "x", color='blue', label="datos")
 ax.loglog(ab2, inv.response, "-", color='orange', label="Marquardt")
-ax.loglog(ab2, ves.inv.response, "-", color='green', label="Bloques1D")
+ax.loglog(ab2, ves.inv.response, "-", color='green', label="VESmanager")
 ax.legend()
 ax.grid(True, which='both')
 ax.set_ylabel(r"Resistividad aparente $\rho_a$ ($\Omega$m)")
@@ -389,7 +389,7 @@ ax.set_title("Datos y ajuste\n" + f" ({ncapas} capas)")
 fig, ax = plt.subplots(figsize=(5,6))
 
 drawModel1D(model=model, ax=ax, color='orange', label="Marquardt", plot='semilogx')
-drawModel1D(model=model2, ax=ax, color='green', label="Bloques1D", plot='semilogx')
+drawModel1D(model=model2, ax=ax, color='green', label="VESmanager", plot='semilogx')
 
 ax.grid(True, which='both')
 ax.set_ylabel("Profundidad (m)")
@@ -463,8 +463,7 @@ fig, ax = plt.subplots(ncols=2, figsize=(7,6))
 
 ax[0].loglog(rhoa, ab2, "x", color='blue', label="datos")
 ax[0].loglog(Response, ab2, "-", color='magenta', label="ajuste")
-# drawModel1D(model=Model, ax=ax[0], color='orange', label="modelo", plot='loglog')
-# ax[0].set_ylim(max(ab2)*1.1, min(ab2)*0.9)
+# drawModel1D(model=Model, ax=ax[0], color='orange', label="modelo", plot='loglog'); ax[0].set_ylim(max(ab2)*1.1, min(ab2)*0.9)
 ax[0].invert_yaxis()
 ax[0].legend()
 ax[0].grid(True, which='both')
