@@ -104,14 +104,19 @@ Los datos por lo general no traen un campo de errores ('err'), requiriendo que l
 data.estimateError(relativeError=0.03, absoluteUError=5e-5)
 # which internally calls
 # data['err'] = ert.estimateError(data, ...)  # can also set manually
-_ = data.show(data['err']*100, label='error estimate (%)')
+_ = data.show(data['err']*100, label='Error (%)')
 ```
 
 ## Pseudosección
 
 ```{python}
-ax, cb = ert.showData(data, vals=data['rhoa'], cMap='Spectral_r', logScale=True)
-cb.set_label('Resistividad aparente ($\Omega$m)', fontsize=11, fontweight='normal')
+ax, cb = ert.showData(data, 
+                      vals=data['rhoa'], 
+                      cMap='Spectral_r', 
+                      logScale=True
+                      )
+cb.set_label('Resistividad aparente ($\Omega$m)', 
+             fontsize=11, fontweight='normal')
 
 # plt.savefig('ERT/figs/ert-' + tomocode + '-pseudo.png', dpi=300, bbox_inches='tight')
 ```

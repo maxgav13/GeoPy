@@ -126,7 +126,10 @@ fig, ax = plt.subplots(figsize=(4,5))
 vesM.showModel(model=modelM, ax=ax, plot='semilogx')
 ax.set_xlabel(r"Resistividad aparente $\rho_a$ ($\Omega$m)")
 ax.set_ylabel("Profundidad (m)")
+ax.set_title("Modelo manual" + f" ({ncapasm} capas)")
 ax.grid(True, which='both')
+
+# plt.savefig("VES/figs/" + vescode + "-manual-" + str(ncapasm) + "capas.png", dpi=300, bbox_inches='tight')
 ```
 
 ```{python}
@@ -135,8 +138,11 @@ vesM.showFit(ax=ax)
 # drawModel1D(model=modelM, ax=ax, label="Modelo", plot='loglog'); ax.set_ylim(max(ab2)*1.1, min(ab2)*0.9)
 ax.set_xlabel(r"Resistividad $\rho$ ($\Omega$m)")
 ax.set_ylabel("AB/2 (m)")
+ax.set_title("Datos y ajuste manual" + f" ({ncapasm} capas)")
 ax.grid(True, which='both')
 ax.legend(loc='best')
+
+# plt.savefig("VES/figs/" + vescode + "-manual-ajuste-" + str(ncapasm) + "capas.png", dpi=300, bbox_inches='tight')
 ```
 
 ## Inversión con espesores fijos
@@ -162,15 +168,23 @@ drawModel1D(ax, espesores, res_r, color='blue', label="Espesor fijo", plot='semi
 # drawModel1D(model=modelM, ax=ax, color='orange', label="Manual", plot='semilogx'); ax.legend(loc='best')
 ax.set_xlabel(r"Resistividad $\rho$ ($\Omega$m)")
 ax.set_ylabel("Profundidad (m)")
+ax.set_title("Modelo de resistividad\n Espesores fijos (" + str(ncapasm) + " capas)")
 ax.grid(True, which='both')
+
+# plt.savefig("VES/figs/" + vescode + "-espesor-fijo-" + str(ncapasm) + "capas.png", dpi=300, bbox_inches='tight')
 ```
 
 ```{python}
 fig, ax = plt.subplots(figsize=(7,4))
 ax.loglog(ab2, rhoa, 'o', color="C0", label='datos')
 ax.loglog(ab2, inv_r.response, '-', color="C5", label='ajuste')
+ax.set_xlabel("AB/2 (m)")
+ax.set_ylabel(r"Resistividad $\rho$ ($\Omega$m)")
+ax.set_title("Datos y ajuste con espesores fijos\n Rel RMS={:.2f} %, $\chi^2$={:.2f}".format(inv_r.relrms(), inv_r.chi2()))
 ax.grid(True, which='both')
 ax.legend(loc='best')
+
+# plt.savefig("VES/figs/" + vescode + "-espesor-fijo-ajuste-" + str(ncapasm) + "capas.png", dpi=300, bbox_inches='tight')
 ```
 
 ## Inversión con diferentes métodos y número de capas
