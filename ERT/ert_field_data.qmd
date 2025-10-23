@@ -32,18 +32,29 @@ tomocode = "DD-1" # Código del perfil, nombre a usar en archivos de salida
 Exploramos la topografía en los datos, si la tiene.
 
 ```{python}
-ypos = pg.y(data)
 xpos = pg.x(data)
+ypos = pg.y(data)
+zpos = pg.z(data)
+
+print(xpos)
+print(ypos)
+print(zpos)
 ```
 
 ```{python}
 lp = max(xpos - min(xpos))  # longitud del perfil
-deltaZ = max(ypos - min(ypos))
+deltaY = max(ypos - min(ypos))
+deltaZ = max(zpos - min(zpos))
 
 print(f"Longitud del perfil: {lp:.2f} m")
-print(f"Elevación mínima: {min(ypos):.2f} m")
-print(f"Elevación máxima: {max(ypos):.2f} m")
-print(f"Diferencia de elevación: {deltaZ:.2f} m")
+
+print(f"Elevación mínima (Y): {min(ypos):.2f} m")
+print(f"Elevación máxima (Y): {max(ypos):.2f} m")
+print(f"Diferencia de elevación (Y): {deltaY:.2f} m")
+
+print(f"Elevación mínima (Z): {min(zpos):.2f} m")
+print(f"Elevación máxima (Z): {max(zpos):.2f} m")
+print(f"Diferencia de elevación (Z): {deltaZ:.2f} m")
 ```
 
 Si no se tiene incluida la topografía en el archivo o no la reconoce se puede agregar por medio de un archivo (x,y), si se tiene encabezado de columnas se usa `skiprows=1` si no se usa `skiprows=0`. El archivo de topografía tiene que comprender los extremos del perfil para evitar extrapolación.
@@ -56,15 +67,28 @@ Se interpolan los datos topográficos a las posiciones de los electrodos (sensor
 
 ```{python}
 bspl = make_interp_spline(topo[:,0], topo[:,1], k=3)
-y_interp = bspl(xpos)
-print(y_interp)
+z_interp = bspl(xpos)
+print(z_interp)
 ```
 
 ```{python}
 sensor_positions = data.sensorPositions()
 for i in range(len(sensor_positions)):
   pos = sensor_positions[i]
-  pos[1] = y_interp[i]
+  pos[2] = z_interp[i]
+  data.setSensorPosition(i,pos)
+```
+
+Si leyó la topografía pero está en el eje Y en lugar del eje Z se puede corregir de la siguiente forma, esto para que al exportar el archivo a otros formatos la topografía quede en el eje Z. Por defecto no se va a evaluar este bloque. _Después de correr la inversión la topografía va a quedar en el eje Y automáticamente_.
+
+```{python}
+#| eval: false
+
+sensor_positions = data.sensorPositions()
+for i in range(len(sensor_positions)):
+  pos = sensor_positions[i]
+  pos[2] = pos[1]
+  pos[1] = 0.0  # opcional, para dejar Y=0.0 m
   data.setSensorPosition(i,pos)
 ```
 
@@ -78,8 +102,14 @@ ax.set_ylabel('Z (m)')
 ax.set_xlabel('Distancia (m)')
 ax.set_aspect(aspect=10) # exageracion vertical
 # ax.invert_xaxis() # invierte la direccion del eje-x
-plt.plot(pg.x(data), pg.y(data), 'x-', color='b')
+plt.plot(pg.x(data), pg.z(data), 'x-', color='b')
 plt.show()
+```
+
+Salva los datos en un formato unificado.
+
+```{python}
+data.save('ERT/datos/DD_BERT.dat')
 ```
 
 ## Calculamos valores necesarios para la inversión
@@ -168,7 +198,8 @@ mod = mgr_ert.invert(data,
                      lam=10, 
                      paraDX=0.3, 
                      paraMaxCellSize=10, 
-                     paraDepth=35, 
+                     paraDepth=lp*.2, # profundidad al 20% de la longitud del perfil
+                    #  paraDepth=35, # profundidad fija
                      quality=34.4
                      )
 ```
@@ -284,9 +315,7 @@ Opciones gráficas para mostrar los resultados.
 kw_ert = dict(cMin=60, 
               cMax=900, 
               cMap="Spectral_r", 
-              logScale=True, 
-              xlabel="x (m)", 
-              ylabel="z (m)"
+              logScale=True 
               # ,coverage=1
               )
 ```
@@ -440,10 +469,4 @@ Salva todo
 
 ```{python}
 mgr_ert.saveResult('ERT/tomo-res-' + tomocode + '/')
-```
-
-Salva los datos en un formato unificado
-
-```{python}
-data.save('ERT/datos/DD_py.dat')
 ```
