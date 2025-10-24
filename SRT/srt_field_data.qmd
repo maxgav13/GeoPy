@@ -37,6 +37,9 @@ Exploramos la topografía en los datos, si la tiene.
 ```{python}
 ypos = pg.y(data)
 xpos = pg.x(data)
+
+print(xpos)
+print(ypos)
 ```
 
 ```{python}
@@ -60,7 +63,7 @@ Por lo general la topografía empieza en x=0, tomando como inicio el disparo en 
 Se interpolan los datos topográficos a las posiciones de los sensores (disparos y geófonos), el argumento `k` de `make_interp_spline` define si la interpolación es lineal (1) o con b-splines (3).
 
 ```{python}
-x0 = 0 # offset de la topografía
+x0 = -20 # offset de la topografía
 topo_x = topo[:,0] + x0 
 topo_y = topo[:,1] 
 
@@ -133,12 +136,13 @@ mgr_refra = tt.TravelTimeManager(data)
 # ax, cbar = mgr_refra.showData()
 ```
 
-Se realiza la inversión mediante el método `invert`. La malla es creada on-the-fly de acuerdo con la posición de los sensores. Se puede jugar con el gradiente del modelo inicial (argumentos `vTop` y `vBottom`) y la regularización con `lam` y `zWeight`. Adicionalmente se pueden definir los límites de velocidad con `limits` (mínimo y máximo), el tamaño máximo de celda con `paraMaxCellSize`, y la profundidad de la malla con `paraDepth`. El argumento `quality` define la calidad de la malla (típicamente entre 33 y 35), entre más alto el valor, mejor la calidad pero mayor tiempo de cálculo.
+Se realiza la inversión mediante el método `invert`. La malla es creada on-the-fly de acuerdo con la posición de los sensores. Se puede jugar con el gradiente del modelo inicial (argumentos `vTop` y `vBottom`) y la regularización con `lam` (suavizado) y `zWeight` (relación entre vertical/horizontal, <1 estructuras horizontales, >1 estructuras verticales). Adicionalmente se pueden definir los límites de velocidad con `limits` (mínimo y máximo, usar un máximo mayor al requerido), el tamaño máximo de celda con `paraMaxCellSize`, y la profundidad de la malla con `paraDepth`. El argumento `quality` define la calidad de la malla (típicamente entre 33 y 35), entre más alto el valor, mejor la calidad pero mayor tiempo de cálculo.
 
 ```{python}
 mgr_refra.invert(secNodes = 3, 
                  paraMaxCellSize = 5.0, # tamaño máximo de celda en m
-                #  paraDepth = 35.0, # profundidad de la malla en m
+                #  paraDepth = 35.0, # profundidad fija
+                # paraDepth=lp*.3, # profundidad al 30% de la longitud
                  lam = 200, 
                  zWeight = 0.8, 
                  vTop = 500, 
@@ -267,6 +271,7 @@ ax.scatter(gx,gy+.05,marker='o',color='k',s=15,alpha=.5,label='Geófono')
 ax.set_title('Rel RMS={:.2f} %, $\chi^2$={:.2f}'.format(mgr_refra.inv.relrms(), mgr_refra.inv.chi2()))
 ax.set_ylabel('Z (m)')
 ax.set_xlabel('Distancia (m)')
+ax.set_frame_on(False)
 # ax.set_ylim(bottom=-40) # ajusta el limite inferior del eje-y
 # ax.set_aspect(aspect=1) # ajusta la relacion de aspecto
 cbar.set_label('Velocidad (m/s)')
@@ -301,6 +306,7 @@ ax.scatter(gx,gy+.05,marker='o',color='k',s=15,alpha=.5,label='Geófono')
 ax.set_title('Rel RMS={:.2f} %, $\chi^2$={:.2f}'.format(mgr_refra.inv.relrms(), mgr_refra.inv.chi2()))
 ax.set_ylabel('Z (m)')
 ax.set_xlabel('Distancia (m)')
+ax.set_frame_on(False)
 ax.set_aspect(aspect=1)
 cbar.set_label('Velocidad (m/s)')
 ax.legend(loc='lower right', fontsize='small') # agrega leyenda
@@ -336,6 +342,7 @@ pg.viewer.mpl.drawField(ax, mgr_refra.paraDomain, refra_points
 ax.set_title('Rel RMS={:.2f} %, $\chi^2$={:.2f}'.format(mgr_refra.inv.relrms(), mgr_refra.inv.chi2()))
 ax.set_ylabel('Z (m)')
 ax.set_xlabel('Distancia (m)')
+ax.set_frame_on(False)
 ax.set_aspect(aspect=1)
 cbar.set_label('Velocidad (m/s)')
 ax.legend(loc='lower right', fontsize='small') # agrega leyenda
