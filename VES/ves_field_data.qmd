@@ -233,7 +233,7 @@ fig, ax = plt.subplots(figsize=(4,5))
 drawModel1D(model=model_f, ax=ax, color='blue', label="Espesor fijo", plot='semilogx')
 ax.set_xlabel(r"Resistividad $\rho$ ($\Omega$m)")
 ax.set_ylabel("Profundidad (m)")
-ax.set_title("Modelo de resistividad\n Espesor fijo (" + str(ncapasm) + " capas)")
+ax.set_title("Modelo de resistividad\n Espesor fijo")
 ax.grid(True, which='both')
 
 # plt.savefig("VES/figs/" + vescode + "-espesor-fijo.png", dpi=300, bbox_inches='tight')
