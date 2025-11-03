@@ -156,6 +156,8 @@ Si se tiene conocimiento previo de los espesores de las capas (pozo, estudios pr
 f_r = VESRhoModelling(thk=espesores, ab2=ab2, mn2=mn2, nLayers=ncapasm)
 
 inv_r = pg.Inversion(fop=f_r, verbose=False)
+inv_r.dataTrans = 'log'
+inv_r.modelTrans = 'log'
 res_r = inv_r.run(rhoa, err)
 ```
 
@@ -285,6 +287,7 @@ for h in capas:
                          nLayers=h
                          )
     inv_m = MarquardtInversion(fop=fop_m, verbose=True)
+    inv_m.dataTrans = 'log'
     invs_m.append(inv_m)
     mod_m = inv_m.run(rhoa, err, lam=Lam, verbose=False)
     mods_m.append(mod_m)
@@ -396,6 +399,7 @@ fop = VESModelling(ab2=ab2,
                    nLayers=ncapas
                    )
 inv = MarquardtInversion(fop=fop, verbose=True)
+inv.dataTrans = 'log'
 ```
 
 ```{python}
