@@ -15,6 +15,7 @@ from matplotlib.ticker import MaxNLocator
 from scipy.stats import chi2
 import pygimli as pg
 from pygimli.physics.ves import VESManager, VESModelling, VESRhoModelling
+from pygimli.frameworks.lsqrinversion import LSQRInversion
 from pygimli.frameworks.resolution import modelCovariance
 from pygimli.frameworks import MarquardtInversion
 from pygimli.viewer.mpl import drawModel1D
@@ -107,7 +108,9 @@ vesM = VESManager(ab2=ab2,
 ```{python}
 ncapasm = len(resistividades) # Número de capas en el modelo
 Lam = 20 # Parámetro de suavizado
+```
 
+```{python}
 vesM.invert(rhoa, err, 
             nLayers=ncapasm, 
             lam=Lam, lambdaFactor=0.8,
@@ -150,7 +153,8 @@ ax.legend(loc='best')
 Si se tiene conocimiento previo de los espesores de las capas (pozo, estudios previos, etc.), se puede realizar una inversión con estos espesores fijos, ajustando solo las resistividades. Aquí vamos a usar los espesores definidos en el modelo manual.
 
 ```{python}
-f_r = VESRhoModelling(thk=espesores, ab2=ab2, mn2=mn2, nLayers=4)
+f_r = VESRhoModelling(thk=espesores, ab2=ab2, mn2=mn2, nLayers=ncapasm)
+
 inv_r = pg.Inversion(fop=f_r, verbose=False)
 res_r = inv_r.run(rhoa, err)
 ```
@@ -171,7 +175,7 @@ ax.set_ylabel("Profundidad (m)")
 ax.set_title("Modelo de resistividad\n Espesores fijos (" + str(ncapasm) + " capas)")
 ax.grid(True, which='both')
 
-# plt.savefig("VES/figs/" + vescode + "-espesor-fijo-" + str(ncapasm) + "capas.png", dpi=300, bbox_inches='tight')
+# plt.savefig("VES/figs/" + vescode + "-espesores-fijos-" + str(ncapasm) + "capas.png", dpi=300, bbox_inches='tight')
 ```
 
 ```{python}
@@ -184,7 +188,68 @@ ax.set_title("Datos y ajuste con espesores fijos\n Rel RMS={:.2f} %, $\chi^2$={:
 ax.grid(True, which='both')
 ax.legend(loc='best')
 
-# plt.savefig("VES/figs/" + vescode + "-espesor-fijo-ajuste-" + str(ncapasm) + "capas.png", dpi=300, bbox_inches='tight')
+# plt.savefig("VES/figs/" + vescode + "-espesores-fijos-ajuste-" + str(ncapasm) + "capas.png", dpi=300, bbox_inches='tight')
+```
+
+## Inversión fijando espesor(es) y/o resistividad(es)
+
+Si se tiene conocimiento previo de algún espesor o resistividad en particular, se puede fijar ese parámetro durante la inversión. Aquí se muestra un ejemplo fijando el espesor de la segunda capa a 5 m.
+
+```{python}
+f_f = VESModelling(ab2=ab2, mn2=mn2, nLayers=ncapasm)
+
+inv_f = LSQRInversion(fop=f_f, verbose=True)
+inv_f.dataTrans = 'log'
+inv_f.modelTrans = 'log'
+inv_f.inv.setMarquardtScheme()
+```
+
+Para fijar un parámetro, se crea una matriz `G` que indica qué parámetro del modelo se va a fijar (1 en la posición correspondiente al parámetro, 0 en las demás), y un vector `c` con el valor fijo deseado. Recordar que el modelo está organizado primero con los espesores (número de capas - 1) y luego con las resistividades (número de capas). Si se desea fijar más de un parámetro a la vez, se agregan más filas a la matriz `G` y más valores al vector `c`.
+
+```{python}
+param_f = 1 # Cantidad de parámetros a fijar
+
+G = pg.Matrix(rows=param_f, cols=len(modelM))
+G.setVal(0, 1, 1) # Fijar el espesor de la segunda capa (índice 1)
+
+c = pg.Vector(param_f) 
+c[0] = 5.0 # Valor fijo del espesor de la segunda capa
+```
+
+Se usa el método `setParameterConstraints` para aplicar esta restricción en la inversión. Es necesario definir un modelo inicial, por lo que se usa el modelo manual definido anteriormente.
+
+```{python}
+inv_f.setParameterConstraints(G, c, 100)
+model_f = inv_f.run(rhoa, err, lam=Lam, startModel=modelM)
+```
+
+```{python}
+print(f"\u03C7^2: {inv_f.chi2():.2f}")
+print(f"Rel RMS: {inv_f.relrms():.2f} %")
+```
+
+```{python}
+fig, ax = plt.subplots(figsize=(4,5))
+drawModel1D(model=model_f, ax=ax, color='blue', label="Espesor fijo", plot='semilogx')
+ax.set_xlabel(r"Resistividad $\rho$ ($\Omega$m)")
+ax.set_ylabel("Profundidad (m)")
+ax.set_title("Modelo de resistividad\n Espesor fijo (" + str(ncapasm) + " capas)")
+ax.grid(True, which='both')
+
+# plt.savefig("VES/figs/" + vescode + "-espesor-fijo.png", dpi=300, bbox_inches='tight')
+```
+
+```{python}
+fig, ax = plt.subplots(figsize=(7,4))
+ax.loglog(ab2, rhoa, 'o', color="C0", label='datos')
+ax.loglog(ab2, inv_f.response, '-', color="C5", label='ajuste')
+ax.set_xlabel("AB/2 (m)")
+ax.set_ylabel(r"Resistividad $\rho$ ($\Omega$m)")
+ax.set_title("Datos y ajuste con espesor fijo\n Rel RMS={:.2f} %, $\chi^2$={:.2f}".format(inv_f.relrms(), inv_f.chi2()))
+ax.grid(True, which='both')
+ax.legend(loc='best')
+
+# plt.savefig("VES/figs/" + vescode + "-espesor-fijo.png", dpi=300, bbox_inches='tight')
 ```
 
 ## Inversión con diferentes métodos y número de capas
