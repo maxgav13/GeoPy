@@ -168,7 +168,7 @@ Vemos el modelo y su ajuste con los datos. La línea de código comentada permit
 
 ```{python}
 fig, ax = plt.subplots(figsize=(4,5))
-drawModel1D(ax, espesores, res_r, color='blue', label="Espesor fijo", plot='semilogx')
+drawModel1D(ax, espesores, res_r, color='blue', label="Espesores fijos", plot='semilogx')
 # drawModel1D(model=modelM, ax=ax, color='orange', label="Manual", plot='semilogx'); ax.legend(loc='best')
 ax.set_xlabel(r"Resistividad $\rho$ ($\Omega$m)")
 ax.set_ylabel("Profundidad (m)")
