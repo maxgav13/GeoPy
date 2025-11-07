@@ -14,7 +14,6 @@ from scipy.interpolate import make_interp_spline
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 import pygimli as pg
-import pygimli.meshtools as mt
 from pygimli.physics import ert
 from pygimli.frameworks import PriorModelling
 ```
