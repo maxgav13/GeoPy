@@ -243,7 +243,7 @@ rlist = ["Resistividades del modelo\n",
          f"\u03C7^2: {mgr_ert.inv.chi2():.2f}\n",
          f"Rel RMS: {mgr_ert.inv.relrms():.2f} %\n"]
 
-with open("ERT/resistividades-" + tomocode + "-.txt", "w") as f:
+with open("ERT/resistividades-" + tomocode + ".txt", "w") as f:
     f.writelines(rlist)
 ```
 
@@ -303,7 +303,7 @@ plt.tick_params(labelsize=12)
 
 plt.show()
 
-# plt.savefig('ERT/figs/res-fit-err-' + tomocode + '-.png', dpi=300, bbox_inches='tight')
+# plt.savefig('ERT/figs/res-fit-err-' + tomocode + '.png', dpi=300, bbox_inches='tight')
 ```
 
 ## Modelo (tomografía)
@@ -338,7 +338,7 @@ cb.set_label('Resistividad ($\Omega$m)', fontsize=11, fontweight='normal')
 print(f"\u03C7^2: {mgr_ert.inv.chi2():.2f}")
 print(f"Rel RMS: {mgr_ert.inv.relrms():.2f}%")
 
-# plt.savefig('ERT/figs/tomo-res-' + tomocode + '-.png', dpi=300, bbox_inches='tight')
+# plt.savefig('ERT/figs/tomo-res-' + tomocode + '.png', dpi=300, bbox_inches='tight')
 ```
 
 ## Modelo como contornos
@@ -358,7 +358,7 @@ ax.set_xlabel('Distancia (m)')
 ax.set_frame_on(False)
 cb.set_label('Resistividad ($\Omega$m)')
 
-# plt.savefig('ERT/figs/tomo-res-contour-' + tomocode + '-.png', dpi=300, bbox_inches='tight')
+# plt.savefig('ERT/figs/tomo-res-contour-' + tomocode + '.png', dpi=300, bbox_inches='tight')
 ```
 
 ### Opción 2 (más suavizada)
@@ -385,7 +385,7 @@ ax.set_xlabel('Distancia (m)')
 # ax.set_aspect(aspect=1)
 cbar.set_label('Resistividad ($\Omega$m)')
 
-# plt.savefig('ERT/figs/tomo-res-contour-' + tomocode + '-.png', dpi=300, bbox_inches='tight')
+# plt.savefig('ERT/figs/tomo-res-contour-' + tomocode + '.png', dpi=300, bbox_inches='tight')
 ```
 
 ```{python}
@@ -421,7 +421,7 @@ ax.set_xlabel('Distancia (m)')
 ax.set_frame_on(False)
 cb.set_label('Conductividad (mS/m)')
 
-# plt.savefig('ERT/figs/tomo-cond-' + tomocode + '-.png', dpi=300, bbox_inches='tight')
+# plt.savefig('ERT/figs/tomo-cond-' + tomocode + '.png', dpi=300, bbox_inches='tight')
 ```
 
 ## Perfil 1D en el centro de la tomografia

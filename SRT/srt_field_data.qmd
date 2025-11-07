@@ -171,7 +171,7 @@ ax.xaxis.set_major_locator(MaxNLocator(integer=True))
 ax.semilogy(chihx, chihy, 'o-', color='b')
 plt.show()
 
-# plt.savefig('SRT/figs/srt-chi2-iter-' + tomocode + '-.png', dpi=300, bbox_inches='tight')
+# plt.savefig('SRT/figs/srt-chi2-iter-' + tomocode + '.png', dpi=300, bbox_inches='tight')
 ```
 
 ### Valores mínimos y máximos
@@ -212,7 +212,7 @@ ax.set_xlabel(r"Distancia (m)", fontsize=14)
 ax.set_ylabel("Tiempo (s)", fontsize=14)
 ax.tick_params(labelsize=12)
 
-# plt.savefig('SRT/figs/tomo-fit-' + tomocode + '-.png', dpi=300, bbox_inches='tight')
+# plt.savefig('SRT/figs/tomo-fit-' + tomocode + '.png', dpi=300, bbox_inches='tight')
 ```
 
 ### Errores entre observados y modelados
@@ -244,7 +244,7 @@ plt.tick_params(labelsize=12)
 
 plt.show()
 
-# plt.savefig('SRT/figs/tomo-fit-err-' + tomocode + '-.png', dpi=300, bbox_inches='tight')
+# plt.savefig('SRT/figs/tomo-fit-err-' + tomocode + '.png', dpi=300, bbox_inches='tight')
 ```
 
 ### Modelo (tomografía)
@@ -281,7 +281,7 @@ print(f"\u03C7^2: {mgr_refra.inv.chi2():.2f}")
 print(f"Rel RMS: {mgr_refra.inv.relrms():.2f} %")
 print(f"Abs RMS: {mgr_refra.inv.absrms()*1000:.3f} ms")
 
-# plt.savefig('SRT/figs/tomo-refra-' + tomocode + '-.png', dpi=300, bbox_inches='tight')
+# plt.savefig('SRT/figs/tomo-refra-' + tomocode + '.png', dpi=300, bbox_inches='tight')
 ```
 
 ### Modelo como contornos
@@ -311,7 +311,7 @@ ax.set_aspect(aspect=1)
 cbar.set_label('Velocidad (m/s)')
 ax.legend(loc='lower right', fontsize='small') # agrega leyenda
 
-# plt.savefig('SRT/figs/tomo-refra-contour-' + tomocode + '-.png', dpi=300, bbox_inches='tight')
+# plt.savefig('SRT/figs/tomo-refra-contour-' + tomocode + '.png', dpi=300, bbox_inches='tight')
 ```
 
 ```{python}

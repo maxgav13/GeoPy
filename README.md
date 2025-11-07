@@ -8,8 +8,8 @@ Video tutoriales en [Procesamiento de datos geofísicos](https://youtube.com/pla
 
 Ejemplos de resultados que se pueden obtener con estas rutinas:
 
-*Tomografía de Resistividad Eléctrica (ERT)* ![Ejemplo de inversión ERT](./ERT/figs/tomo-res-DD-1-.png)
+*Tomografía de Resistividad Eléctrica (ERT)* ![Ejemplo de inversión ERT](./ERT/figs/tomo-res-DD-1.png)
 
-*Tomografía de Refracción Sísmica (SRT)* ![Ejemplo de inversión SRT](./SRT/figs/tomo-refra-SRT-1-.png)
+*Tomografía de Refracción Sísmica (SRT)* ![Ejemplo de inversión SRT](./SRT/figs/tomo-refra-SRT-1.png)
 
 *Sondeos Eléctricos Verticales (VES)* ![Ejemplo de inversión VES](./VES/figs/SEV-1-fit-4capas.png)

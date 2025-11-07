@@ -314,7 +314,7 @@ plt.title('Cambio de $\chi^2$ y Rel RMS\n con Marquardt', fontsize=16, fontweigh
 fig.tight_layout()
 plt.show()
 
-# plt.savefig("VES/figs/" + vescode + "-chi2-marquardt-.png", dpi=300, bbox_inches='tight')
+# plt.savefig("VES/figs/" + vescode + "-chi2-marquardt.png", dpi=300, bbox_inches='tight')
 ```
 
 Es el cambio en $\chi^2$ significativo al aumentar el número de capas? Usamos la prueba estadística Chi-cuadrado para responder a esta pregunta.
@@ -370,7 +370,7 @@ plt.title('Cambio de $\chi^2$ y Rel RMS\n con VESManager', fontsize=16, fontweig
 fig.tight_layout()
 plt.show()
 
-# plt.savefig("VES/figs/" + vescode + "-chi2-vesmanager-.png", dpi=300, bbox_inches='tight')
+# plt.savefig("VES/figs/" + vescode + "-chi2-vesmanager.png", dpi=300, bbox_inches='tight')
 ```
 
 Es el cambio en $\chi^2$ significativo al aumentar el número de capas? Usamos la prueba estadística Chi-cuadrado para responder a esta pregunta.
