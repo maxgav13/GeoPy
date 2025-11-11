@@ -30,7 +30,7 @@ data = pd.read_table("VES/datos/curso_geofisica/datos/SEV1.TXT")
 print(data.head())
 vescode = "SEV-1" # Código del sondeo, nombre a usar en archivos de salida
 
-# ab2, mn, roa = np.genfromtxt("VES/curso_geofisica/datos/SEV1.TXT", 
+# ab2, mn, roa = np.genfromtxt("VES/datos/curso_geofisica/datos/SEV1.TXT", 
 #                              skip_header=1,
 #                              unpack=True)
 
