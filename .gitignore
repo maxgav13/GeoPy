@@ -10,3 +10,4 @@
 
 # DotEnv configuration
 .env
+.DS_Store
