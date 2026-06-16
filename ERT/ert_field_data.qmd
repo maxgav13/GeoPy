@@ -41,9 +41,9 @@ print(zpos)
 ```
 
 ```{python}
-lp = max(xpos - min(xpos))  # longitud del perfil
-deltaY = max(ypos - min(ypos))
-deltaZ = max(zpos - min(zpos))
+lp = max(xpos) - min(xpos)  # longitud del perfil
+deltaY = max(ypos) - min(ypos)
+deltaZ = max(zpos) - min(zpos)
 
 print(f"Longitud del perfil: {lp:.2f} m")
 
