@@ -9,6 +9,7 @@ jupyter: python3
 
 ```{python}
 import numpy as np
+import pandas as pd
 import scipy
 from scipy.interpolate import make_interp_spline
 import matplotlib.pyplot as plt
@@ -59,7 +60,13 @@ print(f"Diferencia de elevación (Z): {deltaZ:.2f} m")
 Si no se tiene incluida la topografía en el archivo o no la reconoce se puede agregar por medio de un archivo (x,y), si se tiene encabezado de columnas se usa `skiprows=1` si no se usa `skiprows=0`. El archivo de topografía tiene que comprender los extremos del perfil para evitar extrapolación.
 
 ```{python}
-topo = np.loadtxt('ERT/datos/DD_topo.txt', skiprows=1)
+topo_file = 'ERT/datos/DD_topo.txt'
+
+if topo_file.endswith('.txt'):
+    topo = np.loadtxt(topo_file, skiprows=1)
+elif topo_file.endswith('.csv'):
+    topo_df = pd.read_csv(topo_file)
+    topo = topo_df.values
 ```
 
 Se interpolan los datos topográficos a las posiciones de los electrodos (sensores), el argumento `k` de `make_interp_spline` define si la interpolación es lineal (1) o con b-splines (3).

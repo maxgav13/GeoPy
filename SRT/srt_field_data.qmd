@@ -12,6 +12,8 @@ Este ejemplo sencillo muestra cómo usar el Refraction Manager para invertir dat
 
 ```{python}
 import numpy as np
+import pandas as pd
+from pygimli.core import mesh
 import scipy
 from scipy.interpolate import make_interp_spline
 import matplotlib.pyplot as plt
@@ -55,7 +57,13 @@ print(f"Diferencia de elevación: {deltaZ:.2f} m")
 Si no se tiene incluida la topografía en el archivo o no la reconoce se puede agregar por medio de un archivo (x,y), si se tiene encabezado de columnas se usa `skiprows=1` si no se usa `skiprows=0`. El archivo de topografía tiene que comprender los extremos (en x) del perfil para evitar extrapolación.
 
 ```{python}
-topo = np.loadtxt('ERT/datos/DD_topo.txt', skiprows=1)
+topo_file = 'ERT/datos/DD_topo.txt'
+
+if topo_file.endswith('.txt'):
+    topo = np.loadtxt(topo_file, skiprows=1)
+elif topo_file.endswith('.csv'):
+    topo_df = pd.read_csv(topo_file)
+    topo = topo_df.values
 ```
 
 Por lo general la topografía empieza en x=0, tomando como inicio el disparo en distancias negativas. La topografía se puede desplazar/ajustar con `x0`, donde `x0` es la posición (offset) del primer disparo. Si la topografía ya contempla el offset, entonces `x0=0`.
@@ -126,6 +134,34 @@ ax.tick_params(labelsize=12)
 # plt.savefig('SRT/figs/tomo-picks-' + tomocode + '-.png', dpi=300, bbox_inches='tight')
 ```
 
+## Errores de los picks
+
+Se asignan errores a los picks de acuerdo con la distancia entre disparo y geófono, donde para distancias cortas se asigna un error mínimo y para distancias largas un error máximo. Esto es útil para evitar que los picks de distancias largas tengan demasiado peso en la inversión. Se usa la siguiente fórmula para calcular el error:
+
+$$
+\text{error} = error_{\min} + \left(\frac{\text{distancia}}{\text{longitud perfil}}\right) \cdot (error_{\max} - error_{\min})
+$$
+
+```{python}
+min_error = 0.001  # Error minimo (e.g., 1 ms) para distancias/tiempos cortos
+max_error = 0.005  # Error maximo (e.g., 5 ms) para distancias/tiempos largos
+```
+
+```{python}
+distances = []
+for i in range(data.size()):
+    s_pos = data.sensorPosition(data('s')[i])
+    g_pos = data.sensorPosition(data('g')[i])
+    dist = np.linalg.norm(np.array(s_pos) - np.array(g_pos))
+    distances.append(dist)
+distances = np.array(distances)
+errors = min_error + (distances / max(distances)) * (max_error - min_error)
+```
+
+```{python}
+data.set("err", errors)
+```
+
 ## Inversión de los datos
 
 Para realizar la inversión se tiene que crear el administrador de la inversión con `tt.TravelTimeManager`.
@@ -136,7 +172,7 @@ mgr_refra = tt.TravelTimeManager(data)
 # ax, cbar = mgr_refra.showData()
 ```
 
-Se realiza la inversión mediante el método `invert`. La malla es creada on-the-fly de acuerdo con la posición de los sensores. Se puede jugar con el gradiente del modelo inicial (argumentos `vTop` y `vBottom`) y la regularización con `lam` (suavizado) y `zWeight` (relación entre vertical/horizontal, <1 estructuras horizontales, >1 estructuras verticales). Adicionalmente se pueden definir los límites de velocidad con `limits` (mínimo y máximo, usar un máximo mayor al requerido), el tamaño máximo de celda con `paraMaxCellSize`, y la profundidad de la malla con `paraDepth`. El argumento `quality` define la calidad de la malla (típicamente entre 33 y 35), entre más alto el valor, mejor la calidad pero mayor tiempo de cálculo.
+Se realiza la inversión mediante el método `invert`. La malla es creada on-the-fly de acuerdo con la posición de los sensores. Se puede jugar con el gradiente del modelo inicial (argumentos `vTop` y `vBottom`) y la regularización con `lam` (suavizado) y `zWeight` (relación entre vertical/horizontal entre 0 y 1, valores cercanos a 0 mayor variabilidad horizontal, valores cercanos a 1 modelo más suavizado lateralmente). Adicionalmente se pueden definir los límites de velocidad con `limits` (mínimo y máximo, usar un máximo mayor al requerido), el tamaño máximo de celda con `paraMaxCellSize`, y la profundidad de la malla con `paraDepth`. El argumento `quality` define la calidad de la malla (típicamente entre 33 y 35), entre más alto el valor, mejor la calidad pero mayor tiempo de cálculo.
 
 ```{python}
 mgr_refra.invert(secNodes = 3, 
@@ -144,7 +180,7 @@ mgr_refra.invert(secNodes = 3,
                 #  paraDepth = 35.0, # profundidad fija
                 # paraDepth=lp*.3, # profundidad al 30% de la longitud
                  lam = 200, 
-                 zWeight = 0.8, 
+                 zWeight = 0.1, 
                  vTop = 500, 
                  vBottom = 5000, 
                 #  limits = [10, 6000], # límites de velocidad en m/s,
@@ -252,14 +288,15 @@ plt.show()
 Se puede desplegar solo el modelo (tomografía) personalizando con keywords. El argumento `coverage` permite ver la cobertura de rayos en el modelo, donde 1 muestra todo el modelo, `mgr_refra.standardizedCoverage()` muestra el área (celdas) cubierta(s) por los rayos.
 
 ```{python}
-kw_refra = dict(cMin = 200, 
-                cMax = 2500, 
-                cMap = "plasma_r",
-                nLevs = 10,
-                coverage = mgr_refra.standardizedCoverage(), 
-                # coverage = 1, 
-                logScale = False
-                )
+kw_refra = dict(
+    cMin=250,
+    cMax=2500,
+    cMap="jet",
+    nLevs=10,
+    coverage=mgr_refra.standardizedCoverage(),
+    # coverage = 1,
+    logScale=False,
+)
 ```
 
 ```{python}
@@ -346,6 +383,35 @@ ax.set_frame_on(False)
 ax.set_aspect(aspect=1)
 cbar.set_label('Velocidad (m/s)')
 ax.legend(loc='lower right', fontsize='small') # agrega leyenda
+```
+
+### Gradiente vertical de velocidad
+
+```{python}
+mesh = mgr_refra.paraDomain
+vel = mgr_refra.paraModel()
+vertGrad = pg.solver.grad(mesh,vel)
+std = np.zeros(len(vel))
+```
+
+```{python}
+kw_grad = dict(
+    cMin=0,
+    cMax=200,
+    cMap="plasma",
+    nLevs=5,
+    coverage=mgr_refra.standardizedCoverage(),
+    # coverage = 1
+)
+```
+
+```{python}
+fig, ax = plt.subplots(figsize=(8, 4))
+pg.show(mesh, data=-vertGrad[:, 1], ax=ax, **kw_grad)
+pg.viewer.mpl.drawSensors(ax, data.sensorPositions(), diam=1, color="k")
+ax.set_title("Gradiente vertical de velocidad (m/s/m)")
+ax.set_xlabel("Distancia (m)")
+ax.set_ylabel("Z (m)")
 ```
 
 ## Perfil 1D en el centro de la tomografia
