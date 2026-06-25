@@ -445,8 +445,8 @@ Enmascarando valores de resistividad para que no se vean en la sección.
 std_cov = mgr_ert.standardizedCoverage(threshold=min(cov_arr))
 
 res_arr = np.array(res)
-std_cov[res_arr < 100] = 0   # enmascara baja resistividad
-std_cov[res_arr > 300] = 0   # enmascara alta resistividad
+std_cov[res_arr < 100] = 0  # enmascara baja resistividad
+std_cov[res_arr > 300] = 0  # enmascara alta resistividad
 
 ax, cb = pg.show(
     mesh,
@@ -456,6 +456,7 @@ ax, cb = pg.show(
     coverage=std_cov,
 )
 
+ax.set_title("Rango de resistividades: 100 - 300 $\Omega$m")
 ax.set_xlabel("Distancia (m)")
 ax.set_ylabel("Z (m)")
 plt.tight_layout()
