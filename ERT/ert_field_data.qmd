@@ -605,12 +605,12 @@ fopDP = PriorModelling(para, posVec)
 ```
 
 ```{python}
-fig, ax = plt.subplots(figsize=(4,5))
-resSmooth = fopDP(result['res']) # result['cond'] para conductividad
-# ax.plot(resSmooth, y, color='orange', label="ERT")
-ax.semilogx(resSmooth, y, color='orange', label="ERT")
+fig, ax = plt.subplots(figsize=(4, 5))
+resSmooth = fopDP(result["res"])  # result['cond'] para conductividad
+# ax.plot(resSmooth, y_1d, color='orange', label="ERT")
+ax.semilogx(resSmooth, y_1d, color="orange", label="ERT")
 ax.set_xlabel(r"$\rho$ ($\Omega$m)")
-ax.tick_params(axis='x', which='minor', labelsize='small', labelrotation=10)
+ax.tick_params(axis="x", which="minor", labelsize="small", labelrotation=10)
 ax.set_ylabel("Z (m)")
 ax.set_title("Perfil 1D" + f" - x={pos1D} m")
 ax.grid(True)

@@ -215,8 +215,8 @@ print(f"\u03c7^2: {Chi2:.2f}")
 print(f"Rel RMS: {RelRMS:.2f} %")
 print(f"Abs RMS: {AbsRMS:.3f} ms")
 
-x = pg.x(mesh.positions())
-y = pg.y(mesh.positions())
+x_mesh = pg.x(mesh.positions())
+y_mesh = pg.y(mesh.positions())
 tri = np.array([[cell.node(i).id() for i in range(3)] for cell in mesh.cells()])
 ```
 
@@ -486,7 +486,7 @@ ax, cb = pg.show(
 
 levels = np.arange(500, 3500, 500)
 contours = ax.tricontour(
-    x, y, tri, refra_points, levels=levels, colors=contour_col, linewidths=1.0
+    x_mesh, y_mesh, tri, refra_points, levels=levels, colors=contour_col, linewidths=1.0
 )
 
 ax.clabel(
@@ -540,22 +540,22 @@ y_i = bspl2(pos1D)
 y_f = mgr_refra.paraDomain.ymin() # profundidad final del perfil 1D escogida automáticamente
 # y_f = -31.0  # profundidad final del perfil 1D escogida manualmente
 
-x = np.repeat(pos1D, reps)
-y = np.linspace(y_i, y_f, reps)
+x_1d = np.repeat(pos1D, reps)
+y_1d = np.linspace(y_i, y_f, reps)
 ```
 
 ```{python}
-posVec = [pg.Pos(pos) for pos in zip(x, y)]
+posVec = [pg.Pos(pos) for pos in zip(x_1d, y_1d)]
 para = pg.Mesh(mgr_refra.paraDomain)  # make a copy
 para.setCellMarkers(pg.IVector(para.cellCount()))
 fopDP = PriorModelling(para, posVec)
 ```
 
 ```{python}
-fig, ax = plt.subplots(figsize=(4,5))
+fig, ax = plt.subplots(figsize=(4, 5))
 velSmooth = fopDP(mgr_refra.model)
-ax.plot(velSmooth, y, color='orange', label="SRT")
-# ax.semilogx(velSmooth, y, color='orange', label="SRT")
+ax.plot(velSmooth, y_1d, color="orange", label="SRT")
+# ax.semilogx(velSmooth, y_1d, color='orange', label="SRT")
 ax.set_xlabel(r"V (m/s)")
 ax.set_ylabel("Z (m)")
 ax.set_title("Perfil 1D" + f" - x={pos1D} m")
