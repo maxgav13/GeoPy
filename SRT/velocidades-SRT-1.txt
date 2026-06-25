@@ -1,8 +1,8 @@
 Velocidades del modelo
-Mínima: 276.05 m/s
-Máxima: 2597.13 m/s
+Mínima: 274.95 m/s
+Máxima: 2715.08 m/s
 
 Estadísticas del ajuste
-χ^2: 3.13
-Rel RMS: 5.31 %
-Abs RMS: 2.953 ms
+χ^2: 0.59
+Rel RMS: 3.06 %
+Abs RMS: 1.335 ms

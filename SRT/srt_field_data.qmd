@@ -9,10 +9,10 @@ jupyter: python3
 
 Este ejemplo sencillo muestra cómo usar el Refraction Manager para invertir datos de refracción sísmica. 
 
-
 ```{python}
 import numpy as np
 import pandas as pd
+from logging import log
 from pygimli.core import mesh
 import scipy
 from scipy.interpolate import make_interp_spline
@@ -121,22 +121,9 @@ gx = pg.x(data)[list(set(range(len(pg.x(data)))) - set(np.unique(data['s'])))]
 gy = pg.y(data)[list(set(range(len(pg.x(data)))) - set(np.unique(data['s'])))]
 ```
 
-## Curvas de los picks
+### Errores de los picks
 
-```{python}
-fig, ax = plt.subplots()
-ax.invert_yaxis()
-lines = tt.drawFirstPicks(ax, data)
-ax.set_xlabel(r"Distancia (m)", fontsize=14)
-ax.set_ylabel("Tiempo (s)", fontsize=14)
-ax.tick_params(labelsize=12)
-
-# plt.savefig('SRT/figs/tomo-picks-' + tomocode + '-.png', dpi=300, bbox_inches='tight')
-```
-
-## Errores de los picks
-
-Se asignan errores a los picks de acuerdo con la distancia entre disparo y geófono, donde para distancias cortas se asigna un error mínimo y para distancias largas un error máximo. Esto es útil para evitar que los picks de distancias largas tengan demasiado peso en la inversión. Se usa la siguiente fórmula para calcular el error:
+Si los datos no traen información sobre los errores, se asignan errores a los picks de acuerdo con la distancia entre disparo y geófono, donde para distancias cortas se asigna un error mínimo y para distancias largas un error máximo. Esto es útil para evitar que los picks de distancias largas tengan demasiado peso en la inversión. Se usa la siguiente fórmula para calcular el error:
 
 $$
 \text{error} = error_{\min} + \left(\frac{\text{distancia}}{\text{longitud perfil}}\right) \cdot (error_{\max} - error_{\min})
@@ -160,6 +147,25 @@ errors = min_error + (distances / max(distances)) * (max_error - min_error)
 
 ```{python}
 data.set("err", errors)
+```
+
+Salva los datos en un formato unificado.
+
+```{python}
+data.save("SRT/picks/picado_err.sgt")
+```
+
+## Curvas de los picks
+
+```{python}
+fig, ax = plt.subplots()
+ax.invert_yaxis()
+lines = tt.drawFirstPicks(ax, data)
+ax.set_xlabel(r"Distancia (m)", fontsize=14)
+ax.set_ylabel("Tiempo (s)", fontsize=14)
+ax.tick_params(labelsize=12)
+
+# plt.savefig('SRT/figs/tomo-picks-' + tomocode + '-.png', dpi=300, bbox_inches='tight')
 ```
 
 ## Inversión de los datos
@@ -189,6 +195,31 @@ mgr_refra.invert(secNodes = 3,
                  )
 ```
 
+### Resultados de la inversión
+
+Se extrae la malla, el modelo de velocidad y el gradiente vertical de velocidad. Adicionalmente se extraen los valores de $\chi^2$, RMS absoluto y RMS relativo.
+
+```{python}
+mesh = mgr_refra.paraDomain  # mgr_refra.mesh
+
+vel = mgr_refra.model  # mgr_refra.velocity
+
+gradV = pg.solver.grad(mesh, vel)
+vertGrad = -gradV[:, 1]  # gradiente vertical de velocidad (m/s/m)
+
+AbsRMS = mgr_refra.inv.absrms() * 1000
+RelRMS = mgr_refra.inv.relrms()
+Chi2 = mgr_refra.inv.chi2()
+
+print(f"\u03c7^2: {Chi2:.2f}")
+print(f"Rel RMS: {RelRMS:.2f} %")
+print(f"Abs RMS: {AbsRMS:.3f} ms")
+
+x = pg.x(mesh.positions())
+y = pg.y(mesh.positions())
+tri = np.array([[cell.node(i).id() for i in range(3)] for cell in mesh.cells()])
+```
+
 ### Cambio en el $\chi^2$
 
 ```{python}
@@ -212,24 +243,39 @@ plt.show()
 
 ### Valores mínimos y máximos
 
+Velocidades
+
 ```{python}
-vmin = min(mgr_refra.model)
-vmax = max(mgr_refra.model)
+vmin = min(vel)
+vmax = max(vel)
 
 print(f"Vmin: {vmin:.1f} m/s")
 print(f"Vmax: {vmax:.1f} m/s")
 ```
 
+Gradiente vertical de velocidad
+
 ```{python}
-vlist = ["Velocidades del modelo\n", 
-         "Mínima: " + str(round(vmin,2)) + " m/s\n", 
-         "Máxima: " + str(round(vmax,2)) + " m/s\n"
-         "\n",
-         "Estadísticas del ajuste\n",
-         f"\u03C7^2: {mgr_refra.inv.chi2():.2f}\n",
-         f"Rel RMS: {mgr_refra.inv.relrms():.2f} %\n",
-         f"Abs RMS: {mgr_refra.inv.absrms()*1000:.3f} ms"
-         ]
+gmin = min(vertGrad)
+gmax = max(vertGrad)
+
+print(f"Gmin: {gmin:.1f} m/s/m")
+print(f"Gmax: {gmax:.1f} m/s/m")
+```
+
+```{python}
+vlist = [
+    "Velocidades del modelo\n",
+    "Mínima: " + str(round(vmin, 2)) + " m/s\n",
+    "Máxima: " + str(round(vmax, 2)) + " m/s\n\n",
+    "Gradiente vertical de velocidad\n",
+    "Mínimo: " + str(round(gmin, 2)) + " m/s/m\n",
+    "Máximo: " + str(round(gmax, 2)) + " m/s/m\n\n",
+    "Estadísticas del ajuste\n",
+    f"\u03c7^2: {Chi2:.2f}\n",
+    f"Rel RMS: {RelRMS:.2f} %\n",
+    f"Abs RMS: {AbsRMS:.3f} ms",
+]
 
 with open("SRT/velocidades-" + tomocode + ".txt", "w") as f:
     f.writelines(vlist)
@@ -300,25 +346,57 @@ kw_refra = dict(
 ```
 
 ```{python}
-# ax, cbar = pg.show(mgr_refra.paraDomain, mgr_refra.model, **kw_refra, figsize=(8,4))
+# ax, cbar = pg.show(mesh, vel, **kw_refra, figsize=(8,4))
 ax, cbar = mgr_refra.showResult(**kw_refra)
-rays = mgr_refra.drawRayPaths(ax=ax, color="w", lw=0.3, alpha=1) # muestra los rayos
-ax.scatter(sx,sy+.2,marker='v',color='r',s=30,alpha=.75,label='Disparo')
-ax.scatter(gx,gy+.05,marker='o',color='k',s=15,alpha=.5,label='Geófono')
-ax.set_title('Rel RMS={:.2f} %, $\chi^2$={:.2f}'.format(mgr_refra.inv.relrms(), mgr_refra.inv.chi2()))
-ax.set_ylabel('Z (m)')
-ax.set_xlabel('Distancia (m)')
+
+rays = mgr_refra.drawRayPaths(ax=ax, color="w", lw=0.3, alpha=1)  # muestra los rayos
+
+ax.scatter(sx, sy + 0.2, marker="v", color="r", s=30, alpha=0.75, label="Disparo")
+ax.scatter(gx, gy + 0.05, marker="o", color="k", s=15, alpha=0.5, label="Geófono")
+
+ax.set_title("Rel RMS={:.2f} %, $\chi^2$={:.2f}".format(RelRMS, Chi2))
+ax.set_ylabel("Z (m)")
+ax.set_xlabel("Distancia (m)")
 ax.set_frame_on(False)
 # ax.set_ylim(bottom=-40) # ajusta el limite inferior del eje-y
 # ax.set_aspect(aspect=1) # ajusta la relacion de aspecto
-cbar.set_label('Velocidad (m/s)')
-ax.legend(loc='lower right', fontsize='small') # agrega leyenda
-
-print(f"\u03C7^2: {mgr_refra.inv.chi2():.2f}")
-print(f"Rel RMS: {mgr_refra.inv.relrms():.2f} %")
-print(f"Abs RMS: {mgr_refra.inv.absrms()*1000:.3f} ms")
+cbar.set_label("Velocidad (m/s)")
+ax.legend(loc="lower right", fontsize="small")  # agrega leyenda
 
 # plt.savefig('SRT/figs/tomo-refra-' + tomocode + '.png', dpi=300, bbox_inches='tight')
+```
+
+Enmascarando valores de velocidad para que no se vean en la sección.
+
+```{python}
+kw_refra_mask = dict(
+    cMin=250,
+    cMax=2500,
+    cMap="jet",
+    nLevs=10,
+    logScale=False,
+)
+```
+
+```{python}
+std_cov = mgr_refra.standardizedCoverage()
+
+vel_arr = np.array(vel)
+std_cov[vel_arr < 500] = 0  # enmascara baja velocidad
+std_cov[vel_arr > 2000] = 0  # enmascara alta velocidad
+
+ax, cb = pg.show(
+    mesh,
+    vel,
+    label="Velocidad (m/s)",
+    **kw_refra_mask,
+    coverage=std_cov,
+)
+
+ax.set_title("Rango de velocidades: 500 - 2000 m/s")
+ax.set_xlabel("Distancia (m)")
+ax.set_ylabel("Z (m)")
+plt.tight_layout()
 ```
 
 ### Modelo como contornos
@@ -326,27 +404,34 @@ print(f"Abs RMS: {mgr_refra.inv.absrms()*1000:.3f} ms")
 Es necesario convertir los datos de celdas a puntos. Con el argumento `nLevs` se definen la cantidad de clases más 1 que se quieren obtener.
 
 ```{python}
-refra_points = pg.core.cellDataToPointData(mgr_refra.paraDomain, mgr_refra.model)
+refra_points = pg.core.cellDataToPointData(mesh, vel)
 ```
 
 ```{python}
-ax, cbar = pg.show(mgr_refra.paraDomain, refra_points, 
-                   nLevs=6,
-                   cMin=vmin, cMax=vmax, 
-                   cMap="RdYlBu_r",
-                   logScale=False,
-                   linewidths=.5
-                   )
+ax, cbar = pg.show(
+    mesh,
+    refra_points,
+    nLevs=6,
+    cMin=vmin,
+    cMax=vmax,
+    cMap="RdYlBu_r",
+    logScale=False,
+    linewidths=0.5,
+    #  shading='gouraud'
+)
+
 rays = mgr_refra.drawRayPaths(ax=ax, color="k", lw=0.3, alpha=0.5)
-ax.scatter(sx,sy+.2,marker='v',color='r',s=30,alpha=.75,label='Disparo')
-ax.scatter(gx,gy+.05,marker='o',color='k',s=15,alpha=.5,label='Geófono')
-ax.set_title('Rel RMS={:.2f} %, $\chi^2$={:.2f}'.format(mgr_refra.inv.relrms(), mgr_refra.inv.chi2()))
-ax.set_ylabel('Z (m)')
-ax.set_xlabel('Distancia (m)')
+
+ax.scatter(sx, sy + 0.2, marker="v", color="r", s=30, alpha=0.75, label="Disparo")
+ax.scatter(gx, gy + 0.05, marker="o", color="k", s=15, alpha=0.5, label="Geófono")
+
+ax.set_title("Rel RMS={:.2f} %, $\chi^2$={:.2f}".format(RelRMS, Chi2))
+ax.set_ylabel("Z (m)")
+ax.set_xlabel("Distancia (m)")
 ax.set_frame_on(False)
 ax.set_aspect(aspect=1)
-cbar.set_label('Velocidad (m/s)')
-ax.legend(loc='lower right', fontsize='small') # agrega leyenda
+cbar.set_label("Velocidad (m/s)")
+ax.legend(loc="lower right", fontsize="small")  # agrega leyenda
 
 # plt.savefig('SRT/figs/tomo-refra-contour-' + tomocode + '.png', dpi=300, bbox_inches='tight')
 ```
@@ -367,32 +452,57 @@ kw_refra2 = dict(levels = np.arange(500,3500,500),
 
 ```{python}
 ax, cbar = mgr_refra.showResult(**kw_refra)
-ax.scatter(sx,sy+.2,marker='v',color='r',s=30,alpha=.75,label='Disparo')
-ax.scatter(gx,gy+.05,marker='o',color='k',s=15,alpha=.5,label='Geófono')
-pg.viewer.mpl.drawField(ax, mgr_refra.paraDomain, refra_points
-                        , **kw_refra2
-                        )
-# cl = pg.viewer.mpl.drawField(ax, mgr_refra.paraDomain, refra_points
+
+ax.scatter(sx, sy + 0.2, marker="v", color="r", s=30, alpha=0.75, label="Disparo")
+ax.scatter(gx, gy + 0.05, marker="o", color="k", s=15, alpha=0.5, label="Geófono")
+
+pg.viewer.mpl.drawField(ax, mesh, refra_points, **kw_refra2)
+# cl = pg.viewer.mpl.drawField(ax, mesh, refra_points
 #                              , **kw_refra2
 #                              )
 # ax.clabel(cl, cl.levels[:-1], fmt='%1.0f', fontsize=8)
-ax.set_title('Rel RMS={:.2f} %, $\chi^2$={:.2f}'.format(mgr_refra.inv.relrms(), mgr_refra.inv.chi2()))
-ax.set_ylabel('Z (m)')
-ax.set_xlabel('Distancia (m)')
+
+ax.set_title("Rel RMS={:.2f} %, $\chi^2$={:.2f}".format(RelRMS, Chi2))
+ax.set_ylabel("Z (m)")
+ax.set_xlabel("Distancia (m)")
 ax.set_frame_on(False)
 ax.set_aspect(aspect=1)
-cbar.set_label('Velocidad (m/s)')
-ax.legend(loc='lower right', fontsize='small') # agrega leyenda
+cbar.set_label("Velocidad (m/s)")
+ax.legend(loc="lower right", fontsize="small")  # agrega leyenda
+```
+
+```{python}
+contour_col = "white"  # color de los contornos
+
+# si se usa "shading" no se puede usar "coverage", usar uno u otro, no ambos
+ax, cb = pg.show(
+    mesh,
+    vel,
+    label="Velocidad (m/s)",
+    cMap="jet",
+    shading="gouraud",  # suavizado de la malla
+    # coverage=mgr_refra.standardizedCoverage()
+)
+
+levels = np.arange(500, 3500, 500)
+contours = ax.tricontour(
+    x, y, tri, refra_points, levels=levels, colors=contour_col, linewidths=1.0
+)
+
+ax.clabel(
+    contours,
+    inline=True,
+    fontsize=10,
+    fmt="%1.1f",  # Format string (e.g., 1.5)
+    colors=contour_col,
+)
+
+ax.set_xlabel("Distancia (m)")
+ax.set_ylabel("Z (m)")
+plt.tight_layout()
 ```
 
 ### Gradiente vertical de velocidad
-
-```{python}
-mesh = mgr_refra.paraDomain
-vel = mgr_refra.paraModel()
-vertGrad = pg.solver.grad(mesh,vel)
-std = np.zeros(len(vel))
-```
 
 ```{python}
 kw_grad = dict(
@@ -401,14 +511,17 @@ kw_grad = dict(
     cMap="plasma",
     nLevs=5,
     coverage=mgr_refra.standardizedCoverage(),
-    # coverage = 1
+    # coverage = 1,
+    logScale=False,
 )
 ```
 
 ```{python}
 fig, ax = plt.subplots(figsize=(8, 4))
-pg.show(mesh, data=-vertGrad[:, 1], ax=ax, **kw_grad)
+
+pg.show(mesh, data=vertGrad, ax=ax, **kw_grad)
 pg.viewer.mpl.drawSensors(ax, data.sensorPositions(), diam=1, color="k")
+
 ax.set_title("Gradiente vertical de velocidad (m/s/m)")
 ax.set_xlabel("Distancia (m)")
 ax.set_ylabel("Z (m)")

@@ -10,6 +10,8 @@ jupyter: python3
 ```{python}
 import numpy as np
 import pandas as pd
+from cProfile import label
+from PIL.ImageOps import cover
 import scipy
 from scipy.interpolate import make_interp_spline
 import matplotlib.pyplot as plt
@@ -210,6 +212,27 @@ mod = mgr_ert.invert(data,
                      )
 ```
 
+### Resultados de la inversión
+
+Se extrae la malla y el modelo de resistividad. Adicionalmente se extraen los valores de $\chi^2$, RMS absoluto y RMS relativo.
+
+```{python}
+mesh = mgr_ert.paraDomain  # mgr_ert.mesh
+res = mgr_ert.model  # mgr_ert.resistivity
+
+AbsRMS = mgr_ert.inv.absrms()
+RelRMS = mgr_ert.inv.relrms()
+Chi2 = mgr_ert.inv.chi2()
+
+print(f"\u03c7^2: {Chi2:.2f}")
+print(f"Rel RMS: {RelRMS:.2f} %")
+print(f"Abs RMS: {AbsRMS:.3f} ohm.m")
+
+x_mesh = pg.x(mesh.positions())
+y_mesh = pg.y(mesh.positions())
+tri = np.array([[cell.node(i).id() for i in range(3)] for cell in mesh.cells()])
+```
+
 ### Cambio en el $\chi^2$
 
 ```{python}
@@ -234,8 +257,8 @@ plt.show()
 ### Valores mínimos y máximos
 
 ```{python}
-rmin = min(mgr_ert.model)
-rmax = max(mgr_ert.model)
+rmin = min(res)
+rmax = max(res)
 
 print(f"Rmin: {rmin:.1f} ohm.m")
 print(f"Rmax: {rmax:.1f} ohm.m")
@@ -247,8 +270,8 @@ rlist = ["Resistividades del modelo\n",
          "Máxima: " + str(round(rmax,2)) + " ohm.m\n"
          "\n",
          "Estadísticas del ajuste\n",
-         f"\u03C7^2: {mgr_ert.inv.chi2():.2f}\n",
-         f"Rel RMS: {mgr_ert.inv.relrms():.2f} %\n"]
+         f"\u03C7^2: {Chi2:.2f}\n",
+         f"Rel RMS: {RelRMS:.2f} %\n"]
 
 with open("ERT/resistividades-" + tomocode + ".txt", "w") as f:
     f.writelines(rlist)
@@ -313,6 +336,58 @@ plt.show()
 # plt.savefig('ERT/figs/res-fit-err-' + tomocode + '.png', dpi=300, bbox_inches='tight')
 ```
 
+### Cobertura de la malla
+
+```{python}
+cov = mgr_ert.coverage()
+cov_arr = np.array(cov)
+```
+
+```{python}
+ax, cb = pg.show(mesh, cov, cMap="RdYlBu_r", nLevs=9, label="Cobertura")
+ax.set_ylabel("Z (m)", fontsize=11, fontweight="normal")
+ax.set_xlabel("Distancia (m)", fontsize=11, fontweight="normal")
+```
+
+```{python}
+fig, axes = plt.subplots(1, 2, figsize=(11, 7))
+
+# Histograma
+axes[0].hist(cov_arr, bins=50, edgecolor="k", linewidth=0.4)
+axes[0].set_xlabel("Valores de cobertura")
+axes[0].set_ylabel("Conteo")
+axes[0].set_title("Distribución de cobertura")
+
+# Distribución acumulativa
+sorted_cov = np.sort(cov_arr)
+cdf = np.arange(1, len(sorted_cov) + 1) / len(sorted_cov)
+axes[1].plot(sorted_cov, cdf)
+axes[1].set_xlabel("Umbral de cobertura")
+axes[1].set_ylabel("Fracción de celdas enmascaradas (≤ umbral)")
+axes[1].set_title("Distribución acumulativa de cobertura")
+axes[1].grid(True, alpha=0.4)
+
+plt.tight_layout()
+plt.show()
+
+print(f"Min: {cov_arr.min():.4f}")
+print(f"Max: {cov_arr.max():.4f}")
+print(f"Mediana: {np.median(cov_arr):.4f}")
+print(f"Media: {cov_arr.mean():.4f}")
+```
+
+Valores de cobertura por debajo de un umbral específico.
+
+```{python}
+fraction = 0.2  # e.g., hide the bottom X% of cells
+threshold = np.interp(fraction, cdf, sorted_cov)
+print(f"El umbral para el {fraction * 100:.0f}% inferior es: {threshold:.2f}")
+
+cov_value = -1.25
+fraction_at_value = np.interp(cov_value, sorted_cov, cdf)
+print(f"La fracción de celdas por debajo de {cov_value} es: {fraction_at_value:.2f}%")
+```
+
 ## Modelo (tomografía)
 
 Opciones gráficas para mostrar los resultados.
@@ -327,10 +402,11 @@ kw_ert = dict(cMin=60,
 ```
 
 ```{python}
-# ax, cb = pg.show(mgr_ert.paraDomain, mgr_ert.model, nLevs=8, **kw_ert, figsize=(8,4), coverage=mgr_ert.coverage())
+# ax, cb = pg.show(mesh, res, nLevs=8, **kw_ert, figsize=(8,4), coverage=mgr_ert.coverage())
 ax, cb = mgr_ert.showResult(nLevs=8, **kw_ert)
-# ax.set_title(f"Rel RMS: {mgr_ert.inv.relrms():.2f} %")
-ax.set_title('Rel RMS={:.2f} %, $\chi^2$={:.2f}'.format(mgr_ert.inv.relrms(), mgr_ert.inv.chi2()))
+
+# ax.set_title(f"Rel RMS: {RelRMS:.2f} %")
+ax.set_title('Rel RMS={:.2f} %, $\chi^2$={:.2f}'.format(RelRMS, Chi2))
 ax.set_ylabel('Z (m)', fontsize=11, fontweight='normal')
 ax.set_xlabel('Distancia (m)', fontsize=11, fontweight='normal')
 ax.set_aspect(aspect=1)
@@ -342,10 +418,47 @@ ax.tick_params(labelsize=11)
 # ax.spines['left'].set_visible(False)
 cb.set_label('Resistividad ($\Omega$m)', fontsize=11, fontweight='normal')
 
-print(f"\u03C7^2: {mgr_ert.inv.chi2():.2f}")
-print(f"Rel RMS: {mgr_ert.inv.relrms():.2f}%")
-
 # plt.savefig('ERT/figs/tomo-res-' + tomocode + '.png', dpi=300, bbox_inches='tight')
+```
+
+Se puede ajustar el umbral de cobertura en `dropThreshold`, donde el resultado es un modelo que aplica una trasnparencia a las celdas por debajo del umbral.
+
+```{python}
+from pygimli.viewer.mpl import addCoverageAlpha
+
+# Plotear sin cobertura para luego aplicar el enmascaramiento manualmente
+ax, cb = pg.show(mesh, res, label="Resistividad ($\Omega$m)", **kw_ert)
+
+# Luego aplica el enmascaramiento de cobertura manualmente con el umbral que elijas
+# dropThreshold es la fracción acumulada a enmascarar (0=ninguno, 0.6=enmascara el 60% inferior)
+gci = ax.collections[0]
+addCoverageAlpha(gci, mgr_ert.coverage(), dropThreshold=0.4)
+
+ax.set_xlabel("Distancia (m)")
+ax.set_ylabel("Z (m)")
+plt.tight_layout()
+```
+
+Enmascarando valores de resistividad para que no se vean en la sección.
+
+```{python}
+std_cov = mgr_ert.standardizedCoverage(threshold=min(cov_arr))
+
+res_arr = np.array(res)
+std_cov[res_arr < 100] = 0   # enmascara baja resistividad
+std_cov[res_arr > 300] = 0   # enmascara alta resistividad
+
+ax, cb = pg.show(
+    mesh,
+    res,
+    label="Resistividad ($\Omega$m)",
+    **kw_ert,
+    coverage=std_cov,
+)
+
+ax.set_xlabel("Distancia (m)")
+ax.set_ylabel("Z (m)")
+plt.tight_layout()
 ```
 
 ## Modelo como contornos
@@ -355,10 +468,10 @@ Con el argumento `nLevs` se definen la cantidad de clases más 1 que se quieren 
 ### Opción 1 (menos suavizada)
 
 ```{python}
-# ax, cb = pg.show(mgr_ert.paraDomain, mgr_ert.model, nCols=11, nLevs=12, contourLines=False, **kw_ert, figsize=(8,4), coverage=mgr_ert.coverage())
+# ax, cb = pg.show(mesh, res, nCols=11, nLevs=12, contourLines=False, **kw_ert, figsize=(8,4), coverage=mgr_ert.coverage())
 ax, cb = mgr_ert.showResult(nCols=5, nLevs=6, **kw_ert)
-# ax.set_title(f"Rel RMS: {mgr_ert.inv.relrms():.2f} %")
-ax.set_title('Rel RMS={:.2f} %, $\chi^2$={:.2f}'.format(mgr_ert.inv.relrms(), mgr_ert.inv.chi2()))
+# ax.set_title(f"Rel RMS: {RelRMS:.2f} %")
+ax.set_title('Rel RMS={:.2f} %, $\chi^2$={:.2f}'.format(RelRMS, Chi2))
 ax.set_ylabel('Z (m)')
 ax.set_xlabel('Distancia (m)')
 # ax.set_aspect(aspect=1)
@@ -373,11 +486,11 @@ cb.set_label('Resistividad ($\Omega$m)')
 Es necesario convertir los datos de celdas a puntos.
 
 ```{python}
-res_points = pg.core.cellDataToPointData(mgr_ert.paraDomain, mgr_ert.model)
+res_points = pg.core.cellDataToPointData(mesh, res)
 ```
 
 ```{python}
-ax, cbar = pg.show(mgr_ert.paraDomain, res_points, 
+ax, cbar = pg.show(mesh, res_points, 
                    nLevs=8,
                    cMin=rmin, cMax=rmax, 
                    cMap="RdYlBu_r",
@@ -386,7 +499,7 @@ ax, cbar = pg.show(mgr_ert.paraDomain, res_points,
                    )
 pg.viewer.mpl.drawSensors(ax, data.sensorPositions(), 
                           sm='o', diam=2, color='m', alpha=.5)
-ax.set_title('Rel RMS={:.2f} %, $\chi^2$={:.2f}'.format(mgr_ert.inv.relrms(), mgr_ert.inv.chi2()))
+ax.set_title('Rel RMS={:.2f} %, $\chi^2$={:.2f}'.format(RelRMS, Chi2))
 ax.set_ylabel('Z (m)')
 ax.set_xlabel('Distancia (m)')
 # ax.set_aspect(aspect=1)
@@ -397,7 +510,7 @@ cbar.set_label('Resistividad ($\Omega$m)')
 
 ```{python}
 ax, cbar = mgr_ert.showResult(**kw_ert)
-pg.viewer.mpl.drawField(ax, mgr_ert.paraDomain, res_points,
+pg.viewer.mpl.drawField(ax, mesh, res_points,
                         nLevs=6,
                         # levels = [rmin,...,rmax],
                         cMin=rmin, cMax=rmax, 
@@ -410,11 +523,47 @@ pg.viewer.mpl.drawField(ax, mgr_ert.paraDomain, res_points,
                         )
 ```
 
+Enmascarando de acuerdo a la cobertura de la malla, para que no se vean las celdas con baja cobertura.
+
+Se puede ajustar el umbral de cobertura en `threshold`, donde el resultado es un modelo que no muestra las celdas con baja cobertura.
+
+```{python}
+contour_col = "black"  # color de los contornos
+std_cov = mgr_ert.standardizedCoverage(threshold=-1.25)  # adjust threshold here
+
+# si se usa "shading" no se puede usar "coverage", usar uno u otro, no ambos
+ax, cb = pg.show(
+    mesh,
+    res,
+    label="Resistividad ($\Omega$m)",
+    **kw_ert,
+    coverage=std_cov,
+    # shading="gouraud",  # suavizado de la malla
+)
+
+levels = np.arange(100, 1000, 150)
+contours = ax.tricontour(
+    x_mesh, y_mesh, tri, res_points, levels=levels, colors=contour_col, linewidths=1.0
+)
+
+ax.clabel(
+    contours,
+    inline=True,
+    fontsize=10,
+    fmt="%1.0f",  # Format string (e.g., 1.5)
+    colors=contour_col,
+)
+
+ax.set_xlabel("Distancia (m)")
+ax.set_ylabel("Z (m)")
+plt.tight_layout()
+```
+
 ## Obtener conductividad
 
 ```{python}
-result = mgr_ert.paraDomain
-result["res"] = mgr_ert.model
+result = mesh
+result["res"] = res
 result["cond"] = 1 / result["res"] * 1000
 ```
 
@@ -441,16 +590,16 @@ reps = 50 # número de puntos en el perfil
 
 bspl2 = make_interp_spline(pg.x(data), pg.y(data), k=3)
 y_i = bspl2(pos1D)
-y_f = mgr_ert.paraDomain.ymin() # profundidad final del perfil 1D escogida automáticamente
+y_f = mesh.ymin() # profundidad final del perfil 1D escogida automáticamente
 # y_f = -31.0  # profundidad final del perfil 1D escogida manualmente
 
-x = np.repeat(pos1D, reps)
-y = np.linspace(y_i, y_f, reps)
+x_1d = np.repeat(pos1D, reps)
+y_1d = np.linspace(y_i, y_f, reps)
 ```
 
 ```{python}
-posVec = [pg.Pos(pos) for pos in zip(x, y)]
-para = pg.Mesh(mgr_ert.paraDomain)  # make a copy
+posVec = [pg.Pos(pos) for pos in zip(x_1d, y_1d)]
+para = pg.Mesh(mesh)  # make a copy
 para.setCellMarkers(pg.IVector(para.cellCount()))
 fopDP = PriorModelling(para, posVec)
 ```
